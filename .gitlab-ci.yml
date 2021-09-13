@@ -1,0 +1,48 @@
+image: "python:3.7-alpine"
+
+build:
+  stage: build
+  script:
+  - pip install wheel setuptools build
+  - pip install -U -r requirements.txt
+  - pip install -U .
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+
+pytest:
+  stage: test
+  script:
+  - pip install -U coverage pytest pytest-cov
+  - pip install -U -r requirements.txt
+  - cd tests
+  - coverage run -m pytest --cov --junitxml=report.xml .
+  - coverage xml
+  - cd ..
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  artifacts:
+    when: always
+    reports:
+      junit: tests/report.xml
+      cobertura: tests/coverage.xml
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+
+pages:
+  stage: deploy
+  script:
+  - export PATH="${PATH}:${HOME}/.local/bin"
+  - pip install -U sphinx
+  - pip install -r docs/requirements.txt
+  - pip install -U -r requirements.txt
+  - pip install -U .
+  - mkdir -p .public
+  - sphinx-build -b html docs .public
+  - mv .public public
+  artifacts:
+    paths:
+    - public
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
