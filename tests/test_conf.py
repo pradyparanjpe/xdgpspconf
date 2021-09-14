@@ -18,14 +18,32 @@
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
 """
-XDG Platform Suited Project CONFiguration.
-
-- read project configurationn from standard locations
+Test data locations
 """
 
-from xdgpspconf.config import read_config
-from xdgpspconf.data import locate_data
+from pathlib import Path
+from unittest import TestCase
 
-__version__ = "0!0.0.1"
+from xdgpspconf import read_config
 
-__all__ = ['read_config', 'locate_data']
+
+class TestConfig(TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_ancestors(self):
+        """
+        check that locations are returned
+        """
+        configs = read_config('test', ancestors=True)
+        self.assertIn(Path('./.testrc').resolve(), configs)
+
+    def test_wo_ancestors(self):
+        """
+        check that locations are returned
+        """
+        configs = read_config('test')
+        self.assertNotIn(Path('../setup.cfg').resolve(), configs)

@@ -12,11 +12,11 @@ ignore_errors = True
 
 [run]
 omit =
-    */xdgpsp/__main__.py
-    */xdgpsp/command_input.py
-    */xdgpsp/errors.py
-    */xdgpsp/native_parallel.py
-source = xdgpsp
+    */xdgpspconf/__main__.py
+    */xdgpspconf/command_line.py
+    */xdgpspconf/errors.py
+    */xdgpspconf/native_parallel.py
+source = xdgpspconf
 
 [html]
 show_contexts = True
