@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
 # Copyright © 2020-2021 Pradyumna Paranjape
 #
@@ -17,7 +17,22 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
+"""
+xdgpspconf's defined errors
+"""
 
-"""
-unit tests
-"""
+from pathlib import Path
+
+
+class XdgpspConfError(Exception):
+    """
+    Base error for XdgpspConf(Exception):
+    """
+
+
+class BadConf(XdgpspConfError):
+    """
+    Bad configuration format
+    """
+    def __init__(self, config_file: Path, *args):
+        super().__init__(f'Bad configuration in {config_file}\n', *args)

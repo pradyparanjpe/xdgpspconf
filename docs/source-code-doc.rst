@@ -9,16 +9,28 @@ Entry Point
 Package import
 ==============
 
-xdgpsp
+xdgpspconf
 ---------------------------------
 
-.. automodule:: xdgpsp
+.. automodule:: xdgpspconf
    :members:
 
 command line interface
 ---------------------------------
 
-.. automodule:: xdgpsp.command_line
+.. automodule:: xdgpspconf.command_line
+   :members:
+
+=============================================================================
+
+******************
+Module import
+******************
+
+.. automodule:: xdgpspconf.config
+   :members:
+
+.. automodule:: xdgpspconf.data
    :members:
 
 =============================================================================
@@ -30,7 +42,7 @@ Errors
 Error/Warnings
 ==============
 
-.. automodule:: xdgpsp.errors
+.. automodule:: xdgpspconf.errors
    :members:
 
 =============================================================================

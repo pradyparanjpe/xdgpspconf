@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'xdgpsp'
+project = 'xdgpspconf'
 copyright = '2020-2021, Pradyumna Paranjape'
 author = 'Pradyumna Paranjape'
 

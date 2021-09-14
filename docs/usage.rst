@@ -7,14 +7,30 @@ SYNOPSIS
 **********
 
 .. argparse::
-   :ref: xdgpsp.command_line._cli
-   :prog: xdgpsp
+   :ref: xdgpspconf.command_line._cli
+   :prog: xdgpspconf
 
 **************
-Instructions
+Module import
 **************
 
-User configuration
-====================
+.. code-block:: python
+   :caption: config.py
 
-- Create a configuration file as directed `here <configure.html>`__.
+   from pathlib import Path
+   from xdgpspconf import read_config
+
+
+   _NAME = Path(__file__).parent.name
+
+
+   def parse_config(config):
+       """Place-holder parser."""
+       print(config)
+
+
+   def read_std_config():
+       """Read configuration from standard locations."""
+       for conf_file, config in read_config(_NAME, ancestors=True).items():
+           print(f'file: {conf_file}')
+           parse_config(config)

@@ -1,10 +1,10 @@
-.. xdgpsp documentation master file, created by
+.. xdgpspconf documentation master file, created by
    sphinx-quickstart on Fri Apr 30 19:45:30 2021.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
 ######################################################################
-Welcome to xdgpsp's documentation!
+Welcome to xdgpspconf's documentation!
 ######################################################################
 
 .. toctree::
@@ -14,7 +14,6 @@ Welcome to xdgpsp's documentation!
 
    README
    INSTALL
-   configure
    usage
    source-code-doc
 

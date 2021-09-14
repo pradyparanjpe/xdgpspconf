@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
 # Copyright © 2020-2021 Pradyumna Paranjape
 #
@@ -17,7 +17,31 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
+"""
+Command-line Callable.
 
+module executable script: python3 -m xdgpspconf
 """
-unit tests
-"""
+
+from xdgpspconf import read_config
+from xdgpspconf.command_line import cli
+
+
+def main():
+    """
+    Execute.
+
+    This executable is meant for useless testing.
+    The main utility of this module is to use configurations
+    which are returned by ``config.read_config``.
+    """
+    cli_args = cli()
+    for conf_file, config in read_config(**cli_args).items():
+        print(f'config file: {conf_file}')
+        print('config:')
+        print(config)
+    return 0
+
+
+if __name__ == '__main__':
+    main()

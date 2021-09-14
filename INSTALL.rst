@@ -21,7 +21,7 @@ Install
    .. code-block:: sh
       :caption: install
 
-      pip install xdgpsp
+      pip install xdgpspconf
 
 
 .. tabbed:: module import
@@ -29,7 +29,7 @@ Install
    .. code-block:: sh
       :caption: if ``command not found: pip``
 
-      python3 -m pip install xdgpsp
+      python3 -m pip install xdgpspconf
 
 
 Update
@@ -40,7 +40,7 @@ Update
    .. code-block:: sh
       :caption: install
 
-      pip install -U xdgpsp
+      pip install -U xdgpspconf
 
 
 .. tabbed:: module import
@@ -48,7 +48,7 @@ Update
    .. code-block:: sh
       :caption: if ``command not found: pip``
 
-      python3 -m pip install -U xdgpsp
+      python3 -m pip install -U xdgpspconf
 
 
 Uninstall
@@ -59,7 +59,7 @@ Uninstall
    .. code-block:: sh
       :caption: uninstall
 
-      pip uninstall xdgpsp
+      pip uninstall xdgpspconf
 
 
 .. tabbed:: module import
@@ -67,7 +67,7 @@ Uninstall
    .. code-block:: sh
       :caption: if ``command not found: pip``
 
-      python3 -m pip uninstall xdgpsp
+      python3 -m pip uninstall xdgpspconf
 
 
 
@@ -85,7 +85,7 @@ Install
 
 .. code-block:: sh
 
-   pspman -s -i https://gitlab.com/pradyparanjpe/xdgpsp.git
+   pspman -s -i https://gitlab.com/pradyparanjpe/xdgpspconf.git
 
 
 
@@ -107,4 +107,4 @@ Remove installation:
 
 .. code-block:: sh
 
-    pspman -s -d xdgpsp
+    pspman -s -d xdgpspconf
