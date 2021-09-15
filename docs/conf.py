@@ -24,7 +24,7 @@ copyright = '2020-2021, Pradyumna Paranjape'
 author = 'Pradyumna Paranjape'
 
 # The full version, including alpha/beta/rc tags
-release = '0!0.0.1'
+release = '0!0.0.2'
 
 # -- General configuration ---------------------------------------------------
 

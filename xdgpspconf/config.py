@@ -31,7 +31,7 @@ import configparser
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import toml
 import yaml
@@ -273,12 +273,49 @@ def locate_config(project: str,
     return config_heir
 
 
+def safe_config(project: str,
+                ext: Union[str, List[str]] = None,
+                ancestors: bool = False,
+                cname: str = 'config') -> List[Path]:
+    """
+    Locate safe writable paths of configuration files.
+
+       - Doesn't care about accessibility or existance of locations.
+       - User must catch:
+          - ``PermissionError``
+          - ``IsADirectoryError``
+          - ``FileNotFoundError``
+
+    Args:
+        project: name of project whose configuration is being fetched
+        ext: extension filter(s)
+        ancestors: inherit ancestor directories that contain ``__init__.py``
+        cname: name of config file
+
+    Returns:
+        Paths: First path is least dominant
+
+    """
+    if isinstance(ext, str):
+        ext = [ext]
+    safe_paths: List[Path] = []
+    for loc in reversed(locate_config(project, None, ancestors, cname)):
+        if any(private in str(loc)
+               for private in ('site-packages', 'venv', '/etc', 'setup',
+                               'pyproject')):
+            continue
+        if ext and loc.suffix not in list(ext):
+            continue
+        safe_paths.append(loc)
+    return safe_paths
+
+
 def read_config(project: str,
                 custom: os.PathLike = None,
                 ancestors: bool = False,
                 cname: str = 'config') -> Dict[Path, Dict[str, Any]]:
     """
-    Locate Paths to standard directories.
+    Locate Paths to standard directories and parse config.
 
     Args:
         project: name of project whose configuration is being fetched
@@ -287,7 +324,8 @@ def read_config(project: str,
         cname: name of config file
 
     Returns:
-        parsed configuration from each available file
+        parsed configuration from each available file:
+        first file is least dominant
 
     Raises:
         BadConf- Bad configuration file format
