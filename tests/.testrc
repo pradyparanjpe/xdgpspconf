@@ -5,8 +5,7 @@ key:
     - value 2
     - value 3
     subsubkey2:
-    -
-      - value 1
+    - - value 1
       - value 2
       - value 3
       - value 4

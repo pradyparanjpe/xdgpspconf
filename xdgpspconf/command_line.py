@@ -32,8 +32,7 @@ def _cli() -> ArgumentParser:
     """
     parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
     # python bash/zsh completion
-    parser.add_argument('-p',
-                        '--project',
+    parser.add_argument('project',
                         type=str,
                         help='project whose configuration is sought')
     parser.add_argument('-c',

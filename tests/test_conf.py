@@ -18,16 +18,17 @@
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
 """
-Test data locations
+Test config locations
 """
 
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf import read_config
+from xdgpspconf import read_config, safe_config
+from xdgpspconf.config import write_config
 
 
-class TestConfig(TestCase):
+class TestRead(TestCase):
     def setUp(self):
         pass
 
@@ -38,7 +39,7 @@ class TestConfig(TestCase):
         """
         check that locations are returned
         """
-        configs = read_config('test', ancestors=True)
+        configs = read_config('test', ancestors=True, py_bin=Path(__file__))
         self.assertIn(Path('./.testrc').resolve(), configs)
 
     def test_wo_ancestors(self):
@@ -47,3 +48,20 @@ class TestConfig(TestCase):
         """
         configs = read_config('test')
         self.assertNotIn(Path('../setup.cfg').resolve(), configs)
+
+
+class TestSafeConfig(TestCase):
+    def test_ancestors(self):
+        """
+        check that locations are returned
+        """
+        data_locs = safe_config('test', ancestors=True)
+        self.assertIn(Path('./.testrc').resolve(), data_locs)
+        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
+
+    def test_wo_ancestors(self):
+        """
+        check that locations are returned
+        """
+        data_locs = safe_config('test')
+        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)

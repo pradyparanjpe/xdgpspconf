@@ -18,7 +18,7 @@ Module import
    :caption: config.py
 
    from pathlib import Path
-   from xdgpspconf import read_config
+   from xdgpspconf import read_config, safe_config, locate_data
 
 
    _NAME = Path(__file__).parent.name
@@ -31,6 +31,11 @@ Module import
 
    def read_std_config():
        """Read configuration from standard locations."""
-       for conf_file, config in read_config(_NAME, ancestors=True).items():
+       for conf_file, config in read_config(_NAME, ancestors=True, cname='pref.yml', py_bin=__file__).items():
            print(f'file: {conf_file}')
            parse_config(config)
+
+   def create_std_config(data):
+       """Save configuraion at standard location"""
+       for conf_file in safe_config(_NAME, ancestors=False, cname='pref.yml'):
+           print(f'file: {conf_file}')

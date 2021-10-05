@@ -26,6 +26,6 @@ XDG Platform Suited Project CONFiguration.
 from xdgpspconf.config import read_config, safe_config
 from xdgpspconf.data import locate_data
 
-__version__ = '0!0.0.2'
+__version__ = '0!0.0.4'
 
 __all__ = ['locate_data', 'read_config', 'safe_config']
