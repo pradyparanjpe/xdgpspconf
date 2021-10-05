@@ -29,6 +29,8 @@ Read:
 
 import configparser
 import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -37,6 +39,12 @@ import yaml
 
 from xdgpspconf.common import locate_base, walk_ancestors, xdg_base
 from xdgpspconf.errors import BadConf
+
+
+def _fs_perm(loc: Path):
+    while not loc.exists():
+        loc = loc.parent
+    return os.access(loc, os.W_OK | os.R_OK, effective_ids=True)
 
 
 def _parse_yaml(config: Path) -> Dict[str, Any]:
@@ -353,9 +361,10 @@ def safe_config(project: str,
                for private in ('site-packages', 'venv', '/etc', 'setup',
                                'pyproject')):
             continue
-        if ext and loc.suffix not in list(ext):
+        if ext and loc.suffix and loc.suffix not in list(ext):
             continue
-        safe_paths.append(loc)
+        if _fs_perm(loc):
+            safe_paths.append(loc)
     return safe_paths
 
 

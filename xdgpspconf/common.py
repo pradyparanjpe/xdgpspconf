@@ -90,6 +90,8 @@ def walk_ancestors(child_dir: Path) -> List[Path]:
     """
     config_heir: List[Path] = []
 
+    # I am **NOT** my ancestor
+    child_dir = child_dir.parent
     while not is_mount(child_dir):
         if (child_dir / '__init__.py').is_file():
             config_heir.append(child_dir)

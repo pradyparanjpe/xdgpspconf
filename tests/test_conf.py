@@ -55,7 +55,7 @@ class TestSafeConfig(TestCase):
         """
         check that locations are returned
         """
-        data_locs = safe_config('test', ancestors=True)
+        data_locs = safe_config('test', ext='.yml', ancestors=True)
         self.assertIn(Path('./.testrc').resolve(), data_locs)
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
 
@@ -63,5 +63,5 @@ class TestSafeConfig(TestCase):
         """
         check that locations are returned
         """
-        data_locs = safe_config('test')
+        data_locs = safe_config('test', ext='.yml')
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)

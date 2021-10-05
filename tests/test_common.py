@@ -44,20 +44,6 @@ class TestMount(TestCase):
 
 
 class TestAncestors(TestCase):
-    def setUp(self):
-        self.ancestors = walk_ancestors(Path('.').resolve())
-
-    def tearDown(self):
-        pass
-
-    def test_projroot(self):
-        self.assertIn(Path(f'{__file__}/..').resolve(), self.ancestors)
-
-    def test_projparent(self):
-        self.assertIn(Path(f'{__file__}/../..').resolve(), self.ancestors)
-
-
-class TestAncestors(TestCase):
     ancestors = walk_ancestors(Path('.').resolve())
 
     def setUp(self):
@@ -67,10 +53,10 @@ class TestAncestors(TestCase):
         pass
 
     def test_projroot(self):
-        self.assertIn(Path(f'{__file__}/..').resolve(), self.ancestors)
+        self.assertNotIn(Path(__file__).resolve().parent, self.ancestors)
 
     def test_projparent(self):
-        self.assertIn(Path(f'{__file__}/../..').resolve(), self.ancestors)
+        self.assertIn(Path(__file__).resolve().parent.parent, self.ancestors)
 
 
 class TestBase(TestCase):
@@ -83,10 +69,10 @@ class TestBase(TestCase):
     def test_config(self):
         proj = 'test'
         self.assertNotIn(
-            Path('__file__/../..').resolve(),
+            Path(__file__).resolve().parent.parent,
             locate_base(proj, base_type='config'))
         self.assertIn(
-            Path('__file__/../..').resolve(),
+            Path(__file__).resolve().parent.parent,
             locate_base('test', ancestors=True, base_type='config'))
         if sys.platform.startswith('win'):
             home = Path(os.environ['USER'])
@@ -100,14 +86,14 @@ class TestBase(TestCase):
     def test_custom(self):
         proj = 'test'
         self.assertIn(
-            Path('__file__/../..').resolve(),
+            Path(__file__).resolve().parent.parent,
             locate_base(proj,
-                        custom=Path('__file__/../..').resolve(),
+                        custom=Path(__file__).resolve().parent.parent,
                         base_type='config'))
         self.assertRaises(FileNotFoundError,
                           locate_base,
                           proj,
-                          custom=Path('__file__/../nofile').resolve(),
+                          custom=Path(__file__).resolve().parent / 'nofile',
                           base_type='config')
 
     def test_cache(self):

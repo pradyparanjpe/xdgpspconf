@@ -37,9 +37,10 @@ class TestData(TestCase):
 
     def test_locations(self):
         proj = 'test'
-        self.assertNotIn(Path('__file__/../..').resolve(), locate_data(proj))
+        self.assertNotIn(
+            Path(__file__).resolve().parent.parent, locate_data(proj))
         self.assertIn(
-            Path('__file__/../..').resolve(),
+            Path(__file__).resolve().parent.parent,
             locate_data('test', ancestors=True))
         if sys.platform.startswith('win'):
             home = Path(os.environ['USER'])
@@ -50,8 +51,11 @@ class TestData(TestCase):
         self.assertIn(xdgconfig / proj, locate_data('test', ancestors=True))
 
     def test_ancestors(self):
+        self.assertNotIn(
+            Path(__file__).resolve().parent,
+            ancestral_data(Path('.').resolve()))
         self.assertIn(
-            Path(f'{__file__}/..').resolve(),
+            Path(__file__).resolve().parent.parent,
             ancestral_data(Path('.').resolve()))
 
     def test_local(self):
