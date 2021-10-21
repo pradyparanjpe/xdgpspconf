@@ -20,8 +20,8 @@
 """
 Command line inputs
 """
-
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from pathlib import Path
 
 from argcomplete import autocomplete
 
@@ -38,6 +38,10 @@ def _cli() -> ArgumentParser:
                         default='config',
                         help='base-type sought',
                         choices=('cache', 'config', 'data', 'state'))
+    parser.add_argument('-s',
+                        '--shipped',
+                        type=Path,
+                        help='location of shipped python executable')
     parser.add_argument('-c',
                         '--custom',
                         type=str,

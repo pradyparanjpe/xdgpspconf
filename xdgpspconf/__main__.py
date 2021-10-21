@@ -39,7 +39,7 @@ def main():
     if cli_args['base'] != 'config':
         discoverer = FsDisc(project=cli_args['project'],
                             base=cli_args['base'],
-                            shipped=None,
+                            shipped=cli_args['shipped'],
                             mode=cli_args['mode'])
         for path in discoverer.get_loc(
                 custom=cli_args.get('custom', None),
@@ -49,7 +49,7 @@ def main():
             print('Path:', path)
     else:
         discoverer = ConfDisc(project=cli_args['project'],
-                              shipped=None,
+                              shipped=cli_args['shipped'],
                               mode=cli_args['mode'])
         for config_file, config in discoverer.read_config(
                 custom=cli_args.get('custom', None),

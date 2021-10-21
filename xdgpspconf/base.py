@@ -122,7 +122,7 @@ class FsDisc():
     Args:
         project: str: project under consideration
         base: str: xdg base to fetch {CACHE,CONFIG,DATA,STATE}
-        shipped: Path: namespace: ``__Path__``
+        shipped: Path: ``namespace.__file__``
         **permargs: all (arguments to :py:meth:`os.access`) are passed to
             :py:meth:`xdgpspconf.utils.fs_perm`
 
@@ -139,7 +139,7 @@ class FsDisc():
                  **permargs):
         self.project = project
         self.permargs = permargs
-        self.shipped = [Path(shipped).resolve().parent] if shipped else []
+        self.shipped = Path(shipped).resolve().parent if shipped else None
         self._xdg: PlfmXdg = XDG[base]
 
     def locations(self) -> Dict[str, List[Path]]:
@@ -153,7 +153,7 @@ class FsDisc():
             'improper': self.improper_loc(),
             'user_loc': self.user_xdg_loc(),
             'root_loc': self.root_xdg_loc(),
-            'shipped': self.shipped
+            'shipped': [self.shipped] if self.shipped is not None else []
         }
 
     @property
@@ -309,12 +309,13 @@ class FsDisc():
             inheritance = self.trace_ancestors(Path(trace_pwd))
             dom_order.extend(inheritance)
 
+        locations = self.locations()
         if improper:
-            dom_order.extend(self.locations()['improper'])
+            dom_order.extend(locations['improper'])
 
-        dom_order.extend(self.locations()['user_loc'])
-        dom_order.extend(self.locations()['root_loc'])
-        dom_order.extend(self.locations()['shipped'])
+        for loc in ('user_loc', 'root_loc', 'shipped'):
+            dom_order.extend(locations[loc])
+
         permargs = {
             key: val
             for key, val in kwargs.items()

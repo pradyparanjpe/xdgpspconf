@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Union
 
 from xdgpspconf.base import FsDisc
-from xdgpspconf.config_io import parse_rc, write_rc
+from xdgpspconf.config_io import CONF_EXT, parse_rc, write_rc
 from xdgpspconf.utils import fs_perm
 
 
@@ -55,10 +55,15 @@ class ConfDisc(FsDisc):
         """
         cname = cname or 'config'
         return {
-            'improper': self.improper_loc(cname),
-            'user_loc': self.user_xdg_loc(cname),
-            'root_loc': self.root_xdg_loc(cname),
-            'shipped': self.shipped
+            'improper':
+            self.improper_loc(cname),
+            'user_loc':
+            self.user_xdg_loc(cname),
+            'root_loc':
+            self.root_xdg_loc(cname),
+            'shipped':
+            [(self.shipped / cname).with_suffix(ext)
+             for ext in CONF_EXT] if self.shipped is not None else []
         }
 
     def trace_ancestors(self, child_dir: Path) -> List[Path]:
@@ -109,7 +114,7 @@ class ConfDisc(FsDisc):
         """
         user_base_loc = super().user_xdg_loc()
         config = []
-        for ext in '.yml', '.yaml', '.toml', '.conf':
+        for ext in CONF_EXT:
             for loc in user_base_loc:
                 config.append((loc / cname).with_suffix(ext))
                 config.append(loc.with_suffix(ext))
@@ -134,7 +139,7 @@ class ConfDisc(FsDisc):
         """
         root_base_loc = super().root_xdg_loc()
         config = []
-        for ext in '.yml', '.yaml', '.toml', '.conf':
+        for ext in CONF_EXT:
             for loc in root_base_loc:
                 config.append((loc / cname).with_suffix(ext))
                 config.append(loc.with_suffix(ext))
@@ -159,7 +164,7 @@ class ConfDisc(FsDisc):
         """
         improper_base_loc = super().improper_loc()
         config = []
-        for ext in '.yml', '.yaml', '.toml', '.conf':
+        for ext in CONF_EXT:
             for loc in improper_base_loc:
                 config.append((loc / cname).with_suffix(ext))
                 config.append(loc.with_suffix(ext))
@@ -206,12 +211,13 @@ class ConfDisc(FsDisc):
             inheritance = self.trace_ancestors(Path(trace_pwd))
             dom_order.extend(inheritance)
 
+        locations = self.locations(kwargs.get('cname'))
         if improper:
-            dom_order.extend(self.locations()['improper'])
+            dom_order.extend(locations['improper'])
 
-        dom_order.extend(self.locations(kwargs.get('cname'))['user_loc'])
-        dom_order.extend(self.locations(kwargs.get('cname'))['root_loc'])
-        dom_order.extend(self.locations(kwargs.get('cname'))['shipped'])
+        for loc in ('user_loc', 'root_loc', 'shipped'):
+            dom_order.extend(locations[loc])
+
         permargs = {
             key: val
             for key, val in kwargs.items()
@@ -306,9 +312,9 @@ class ConfDisc(FsDisc):
             return avail_confs
 
         super_config: Dict[str, Any] = {}
-        for config in avail_confs.values():
+        for config in reversed(list(avail_confs.values())):
             super_config.update(config)
-        return {list(avail_confs.keys())[-1]: super_config}
+        return {list(avail_confs.keys())[0]: super_config}
 
     def write_config(self,
                      data: Dict[str, Any],

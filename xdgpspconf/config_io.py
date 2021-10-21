@@ -31,6 +31,11 @@ import yaml
 
 from xdgpspconf.errors import BadConf
 
+CONF_EXT = '.yml', '.yaml', '.toml', '.conf'
+"""
+Extensions that are supported (parsed) by this module
+"""
+
 
 def parse_yaml(config: Path) -> Dict[str, Any]:
     """
