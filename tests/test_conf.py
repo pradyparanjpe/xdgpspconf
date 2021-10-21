@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -24,11 +24,12 @@ Test config locations
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf import read_config, safe_config
-from xdgpspconf.config import write_config
+from xdgpspconf import ConfDisc
 
 
 class TestRead(TestCase):
+    conf_disc = ConfDisc('test', Path(__file__), mode='w')
+
     def setUp(self):
         pass
 
@@ -39,23 +40,27 @@ class TestRead(TestCase):
         """
         check that locations are returned
         """
-        configs = read_config('test', ancestors=True, py_bin=Path(__file__))
+        configs = self.conf_disc.read_config(trace_pwd=True)
+        print(configs)
         self.assertIn(Path('./.testrc').resolve(), configs)
 
     def test_wo_ancestors(self):
         """
         check that locations are returned
         """
-        configs = read_config('test')
+        configs = self.conf_disc.read_config()
         self.assertNotIn(Path('../setup.cfg').resolve(), configs)
 
 
 class TestSafeConfig(TestCase):
+    conf_disc = ConfDisc('test', Path(__file__), mode='w')
+
     def test_ancestors(self):
         """
         check that locations are returned
         """
-        data_locs = safe_config('test', ext='.yml', ancestors=True)
+        data_locs = self.conf_disc.safe_config(ext='.yml', trace_pwd=True)
+        print(data_locs)
         self.assertIn(Path('./.testrc').resolve(), data_locs)
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
 
@@ -63,5 +68,5 @@ class TestSafeConfig(TestCase):
         """
         check that locations are returned
         """
-        data_locs = safe_config('test', ext='.yml')
+        data_locs = self.conf_disc.safe_config(ext='.yml')
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)

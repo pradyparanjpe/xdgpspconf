@@ -14,28 +14,135 @@ SYNOPSIS
 Module import
 **************
 
-.. code-block:: python
-   :caption: config.py
+Configuration
+=================
 
-   from pathlib import Path
-   from xdgpspconf import read_config, safe_config, locate_data
+Read/Write Configurations.
 
+   - Read configurations declared at various locations by root (ADMIN), user (global, local), project (python only)
 
-   _NAME = Path(__file__).parent.name
-
-
-   def parse_config(config):
-       """Place-holder parser."""
-       print(config)
+   - Write to the most global, yet **writable** location.
 
 
-   def read_std_config():
-       """Read configuration from standard locations."""
-       for conf_file, config in read_config(_NAME, ancestors=True, cname='pref.yml', py_bin=__file__).items():
-           print(f'file: {conf_file}')
-           parse_config(config)
+.. tabbed:: read
 
-   def create_std_config(data):
-       """Save configuraion at standard location"""
-       for conf_file in safe_config(_NAME, ancestors=False, cname='pref.yml'):
-           print(f'file: {conf_file}')
+   .. code-block:: python
+      :caption: read_config.py
+
+      from pathlib import Path
+      from xdgpspconf import ConfDisc
+      from xdgpspconf.config_io import write_rc
+
+
+      _NAME = Path(__file__).parent.name
+
+
+      def parse_config(config):
+          """Place-holder parser."""
+          print(config)
+
+
+      def read_std_config():
+          """Read configuration from standard locations."""
+          discoverer = ConfDisc(project=_NAME, shipped=__file__)
+          for conf_file, config in discoverer.read_config(trace_pwd=True, cname='pref.yml').items():
+              print(f'file: {conf_file}')
+              parse_config(config)
+
+
+
+.. tabbed:: write
+
+   .. code-block:: python
+      :caption: write_config.py
+
+      from pathlib import Path
+      from xdgpspconf import ConfDisc
+      from xdgpspconf.config_io import write_rc
+
+
+      _NAME = Path(__file__).parent.name
+
+      def create_std_config(data: dict = {}):
+          """Save configuraion at standard location"""
+          discoverer = ConfDisc(project=_NAME, shipped=__file__)
+          discoverer.write_config(data=data, force='overwrite')
+
+
+.. tabbed:: write manually
+
+   .. code-block:: python
+      :caption: manual_config.py
+
+      from pathlib import Path
+      from xdgpspconf import ConfDisc
+      from xdgpspconf.config_io import write_rc
+
+
+      _NAME = Path(__file__).parent.name
+
+      def update_std_config_manual(data: dict = {}):
+          """Save configuraion at standard location"""
+          discoverer = ConfDisc(project=_NAME, shipped=__file__)
+          most_global = discoverer.safe_config(ext='yml', cname='pref')[-1]
+          most_global.write_rc(data=data, config=conf_file, force='update')
+
+
+DATA
+==========
+
+Access data folders.
+
+.. tabbed:: readable
+
+   .. code-block:: python
+      :caption: readable_data_loc.py
+
+      from pathlib import Path
+      from xdgpspconf import FsDisc
+
+
+      _NAME = Path(__file__).parent.name
+
+
+      def readable_data():
+          """
+          Locate readable standard data locations
+
+          allow discouraged ~/. locations
+          """
+          discoverer = FsDisc(project=_NAME, base='data', mode='r')
+          discoverer.get_loc(improper=True)
+          print('Readable data locations:')
+          for loc in data_loc:
+              print('-', loc)
+
+.. tabbed:: writable
+
+   .. code-block:: python
+      :caption: writable_data.py
+
+      from pathlib import Path
+      from xdgpspconf import FsDisc
+
+
+      _NAME = Path(__file__).parent.name
+
+
+      def writable_data():
+          """
+          Locate writable standard data locations
+          """
+          discoverer = FsDisc(project=_NAME, base='data', mode='w')
+          data_loc = discoverer.get_loc()
+          print('Writable data locations:')
+          for loc in data_loc:
+              print('-', loc)
+
+
+.. note::
+   - Similarly, use for pre-defined bases:
+      - cache
+      - state
+
+   - Other bases may be declared in ``~/.config/xdgpspconf/xdg.yml``

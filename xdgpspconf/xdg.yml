@@ -1,0 +1,60 @@
+data:
+  win:
+    root:
+    - APPDATA
+    var: LOCALAPPDATA
+    default:
+    - AppData/Local
+  posix:
+    root:
+    - /local/share
+    - /usr/local/share
+    - /usr/share
+    var: XDG_DATA_HOME
+    dirs: XDG_DATA_DIRS
+    default:
+    - .local/share
+
+cache:
+  win:
+    root:
+    - TEMP
+    var: TEMP
+    default:
+    - AppData/Local/Temp
+  posix:
+    root: []
+    var: XDG_CACHE_HOME
+    dirs: null
+    default:
+    - .cache
+
+state:
+  win:
+    root:
+    - APPDATA
+    var: LOCALAPPDATA
+    default:
+    - AppData/Local
+  posix:
+    root: []
+    var: XDG_STATE_HOME
+    dirs: XDG_STATE_DIRS
+    default:
+    - .local/state
+
+config:
+  win:
+    root:
+    - APPDATA
+    var: LOCALAPPDATA
+    default:
+    - AppData/Local
+  posix:
+    root:
+    - /etc
+    - /etc/xdg
+    var: XDG_CONFIG_HOME
+    dirs: XDG_CONFIG_DIRS
+    default:
+    - .config

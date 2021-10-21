@@ -11,9 +11,7 @@ Package import
 
 xdgpspconf
 ---------------------------------
-
 .. automodule:: xdgpspconf
-   :members:
 
 command line interface
 ---------------------------------
@@ -27,10 +25,34 @@ command line interface
 Module import
 ******************
 
+Base
+============
+
+.. automodule:: xdgpspconf.base
+   :members:
+
+Configuration
+===============
+
 .. automodule:: xdgpspconf.config
    :members:
 
-.. automodule:: xdgpspconf.data
+=============================================================================
+
+**************
+Structure
+**************
+
+Utilities
+======================
+
+.. automodule:: xdgpspconf.utils
+   :members:
+
+Configuration Input/Output
+=====================================
+
+.. automodule:: xdgpspconf.config_io
    :members:
 
 =============================================================================
@@ -44,14 +66,3 @@ Error/Warnings
 
 .. automodule:: xdgpspconf.errors
    :members:
-
-=============================================================================
-
-**************
-Structure
-**************
-
-Common modifications
-======================
-
-Shared files

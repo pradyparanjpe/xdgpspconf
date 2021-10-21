@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -20,12 +20,13 @@
 """
 XDG Platform Suited Project CONFiguration.
 
-- read project configurationn from standard locations
+- Read project configurationn from standard locations
+
 """
 
-from xdgpspconf.config import read_config, safe_config
-from xdgpspconf.data import locate_data
+from xdgpspconf.base import FsDisc
+from xdgpspconf.config import ConfDisc
 
-__version__ = '0!0.0.5'
+__version__ = '0!0.1.0'
 
-__all__ = ['locate_data', 'read_config', 'safe_config']
+__all__ = ['ConfigDisc', 'FsDisc', 'XDG']

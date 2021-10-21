@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -15,10 +15,9 @@
 # GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License
-# along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
-#
+# along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>. #
 """
-Locate and read configurations.
+Special case of configuration, where base object is a file
 
 Read:
    - standard xdg-base locations
@@ -27,412 +26,318 @@ Read:
 
 """
 
-import configparser
 import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
-import toml
-import yaml
-
-from xdgpspconf.common import locate_base, walk_ancestors, xdg_base
-from xdgpspconf.errors import BadConf
+from xdgpspconf.base import FsDisc
+from xdgpspconf.config_io import parse_rc, write_rc
+from xdgpspconf.utils import fs_perm
 
 
-def _fs_perm(loc: Path):
-    while not loc.exists():
-        loc = loc.parent
-    return os.access(loc, os.W_OK | os.R_OK, effective_ids=True)
-
-
-def _parse_yaml(config: Path) -> Dict[str, Any]:
+class ConfDisc(FsDisc):
     """
-    Read configuration.
+    CONF DISCoverer
 
-    Specified as a yaml file:
-        - .rc
-        - style.yml
-        - *.yml
+    Each location is config file, NOT directory as with FsDisc
     """
-    with open(config, 'r') as rcfile:
-        conf: Dict[str, Any] = yaml.safe_load(rcfile)
-    if conf is None:  # pragma: no cover
-        raise yaml.YAMLError
-    return conf
+    def __init__(self, project: str, shipped: os.PathLike = None, **permargs):
+        super().__init__(project, base='config', shipped=shipped, **permargs)
 
+    def locations(self, cname: str = None) -> Dict[str, List[Path]]:
+        """
+        Shipped, root, user, improper locations
 
-def _write_yaml(data: Dict[str, Any],
-                config: Path,
-                force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
-
-    Args:
-        data: serial data to save
-        config: configuration file path
-        force: force overwrite {'overwrite', 'update', 'fail'}
-
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = _parse_yaml(config)
-    data = {**old_data, **data}
-    with open(config, 'w') as rcfile:
-        yaml.dump(data, rcfile)
-    return True
-
-
-def _parse_ini(config: Path, sub_section: bool = False) -> Dict[str, Any]:
-    """
-    Read configuration.
-
-    Supplied in ``setup.cfg`` OR
-        - *.cfg
-        - *.conf
-        - *.ini
-    """
-    parser = configparser.ConfigParser()
-    parser.read(config)
-    if sub_section:
+        Args:
+            cname: name of configuration file
+        Returns:
+            named dictionary containing respective list of Paths
+        """
+        cname = cname or 'config'
         return {
-            pspcfg.replace('.', ''): dict(parser.items(pspcfg))
-            for pspcfg in parser.sections() if '' in pspcfg
+            'improper': self.improper_loc(cname),
+            'user_loc': self.user_xdg_loc(cname),
+            'root_loc': self.root_xdg_loc(cname),
+            'shipped': self.shipped
         }
-    return {
-        pspcfg: dict(parser.items(pspcfg))
-        for pspcfg in parser.sections()
-    }  # pragma: no cover
 
+    def trace_ancestors(self, child_dir: Path) -> List[Path]:
+        """
+        Walk up to nearest mountpoint or project root.
 
-def _write_ini(data: Dict[str, Any],
-               config: Path,
-               force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
+           - collect all directories containing __init__.py \
+             (assumed to be source directories)
+           - project root is directory that contains ``setup.cfg``
+             or ``setup.py``
+           - mountpoint is a unix mountpoint or windows drive root
+           - I **AM** my 0th ancestor
 
-    Args:
-        data: serial data to save
-        config: configuration file path
-        force: force overwrite {'overwrite', 'update', 'fail'}
+        Args:
+            child_dir: walk ancestry of `this` directory
 
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = _parse_ini(config)
-    data = {**old_data, **data}
-    parser = configparser.ConfigParser()
-    parser.update(data)
-    with open(config, 'w') as rcfile:
-        parser.write(rcfile)
-    return True
+        Returns:
+            List of Paths to ancestor configs:
+                First directory is most dominant
+        """
+        config = []
+        pedigree = super().trace_ancestors(child_dir)
+        config.extend(
+            (config_dir / f'.{self.project}rc' for config_dir in pedigree))
 
+        if pedigree:
+            for setup in ('pyproject.toml', 'setup.cfg'):
+                if (pedigree[-1] / setup).is_file():
+                    config.append(pedigree[-1] / setup)
+        return config
 
-def _parse_toml(config: Path, sub_section: bool = False) -> Dict[str, Any]:
-    """
-    Read configuration.
+    def user_xdg_loc(self, cname: str = 'config') -> List[Path]:
+        """
+        Get XDG_<BASE>_HOME locations.
 
-    Supplied in ``pyproject.toml`` OR
-        - *.toml
-    """
-    if sub_section:
-        with open(config, 'r') as rcfile:
-            conf: Dict[str, Any] = toml.load(rcfile).get('', {})
-        return conf
-    with open(config, 'r') as rcfile:
-        conf = dict(toml.load(rcfile))
-    if conf is None:  # pragma: no cover
-        raise toml.TomlDecodeError
-    return conf
+        `specifications
+        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
 
+        Args:
+            cname: name of config file
 
-def _write_toml(data: Dict[str, Any],
-                config: Path,
-                force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
+        Returns:
+            List of xdg-<base> Paths
+                First directory is most dominant
+        Raises:
+            KeyError: bad variable name
 
-    Args:
-        data: serial data to save
-        config: configuration file path
-        force: force overwrite {'overwrite', 'update', 'fail'}
+        """
+        user_base_loc = super().user_xdg_loc()
+        config = []
+        for ext in '.yml', '.yaml', '.toml', '.conf':
+            for loc in user_base_loc:
+                config.append((loc / cname).with_suffix(ext))
+                config.append(loc.with_suffix(ext))
+        return config
 
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = _parse_toml(config)
-    data = {**old_data, **data}
-    with open(config, 'w') as rcfile:
-        toml.dump(data, rcfile)
-    return True
+    def root_xdg_loc(self, cname: str = 'config') -> List[Path]:
+        """
+        Get ROOT's counterparts of XDG_<BASE>_HOME locations.
 
+        `specifications
+        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
 
-def _parse_rc(config: Path) -> Dict[str, Any]:
-    """
-    Parse rc file.
+        Args:
+            cname: name of config file
 
-    Args:
-        config: path to configuration file
+        Returns:
+            List of root-<base> Paths (parents to project's base)
+                First directory is most dominant
+        Raises:
+            KeyError: bad variable name
 
-    Returns:
-        configuration sections
+        """
+        root_base_loc = super().root_xdg_loc()
+        config = []
+        for ext in '.yml', '.yaml', '.toml', '.conf':
+            for loc in root_base_loc:
+                config.append((loc / cname).with_suffix(ext))
+                config.append(loc.with_suffix(ext))
+        return config
 
-    Raises:
-        BadConf: Bad configuration
+    def improper_loc(self, cname: str = 'config') -> List[Path]:
+        """
+        Get ROOT's counterparts of XDG_<BASE>_HOME locations.
 
-    """
-    if config.name == 'setup.cfg':
-        # declared inside setup.cfg
-        return _parse_ini(config, sub_section=True)
-    if config.name == 'pyproject.toml':
-        # declared inside pyproject.toml
-        return _parse_toml(config, sub_section=True)
-    try:
-        # yaml configuration format
-        return _parse_yaml(config)
-    except yaml.YAMLError:
-        try:
-            # toml configuration format
-            return _parse_toml(config)
-        except toml.TomlDecodeError:
-            try:
-                # try generic config-parser
-                return _parse_ini(config)
-            except configparser.Error:
-                raise BadConf(config_file=config) from None
+        `specifications
+        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
 
+        Args:
+            cname: name of config file
 
-def _write_rc(data: Dict[str, Any], config: Path, force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
+        Returns:
+            List of root-<base> Paths (parents to project's base)
+                First directory is most dominant
+        Raises:
+            KeyError: bad variable name
 
-    Args:
-        data: serial data to save
-        config: configuration file path
-        force: force overwrite {'overwrite', 'update', 'fail'}
+        """
+        improper_base_loc = super().improper_loc()
+        config = []
+        for ext in '.yml', '.yaml', '.toml', '.conf':
+            for loc in improper_base_loc:
+                config.append((loc / cname).with_suffix(ext))
+                config.append(loc.with_suffix(ext))
+        return config
 
-    Returns: success
-    """
-    if config.suffix in ('.conf', '.cfg', '.ini'):
-        return _write_ini(data, config, force)
-    if config.suffix == '.toml':
-        return _write_toml(data, config, force)
-    # assume yaml
-    return _write_yaml(data, config, force)
+    def get_conf(self,
+                 dom_start: bool = True,
+                 improper: bool = False,
+                 **kwargs) -> List[Path]:
+        """
+        Get discovered configuration files.
 
+        Args:
+            dom_start: when ``False``, end with most dominant
+            improper: include improper locations such as *~/.project*
+            **kwargs:
+                - custom: custom location
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  __init__.py. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - cname: name of config file
+                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+        """
+        dom_order: List[Path] = []
 
-def ancestral_config(child_dir: Path, rcfile: str) -> List[Path]:
-    """
-    Walk up to nearest mountpoint or project root.
+        custom = kwargs.get('custom')
+        if custom is not None:
+            # don't check
+            dom_order.append(Path(custom))
 
-       - collect all directories containing __init__.py
-         (assumed to be source directories)
-       - project root is directory that contains ``setup.cfg`` or ``setup.py``
-       - mountpoint is a unix mountpoint or windows drive root
-       - I am **NOT** my ancestor
+        rc_val = os.environ.get(self.project.upper() + 'RC')
+        if rc_val is not None:
+            if not Path(rc_val).is_file():
+                raise FileNotFoundError(
+                    f'RC configuration file: {rc_val} not found')
+            dom_order.append(Path(rc_val))
 
-    Args:
-        child_dir: walk ancestry of `this`  directory
-        rcfile: name of rcfile
+        trace_pwd = kwargs.get('trace_pwd')
+        if trace_pwd is True:
+            trace_pwd = Path('.').resolve()
+        if trace_pwd:
+            inheritance = self.trace_ancestors(Path(trace_pwd))
+            dom_order.extend(inheritance)
 
-    Returns:
-        List of Paths to ancestral configurations:
-            First directory is most dominant
-    """
-    config_dirs = walk_ancestors(child_dir)
-    # setup.cfg, pyproject.toml are missing
+        if improper:
+            dom_order.extend(self.locations()['improper'])
 
-    config_heir: List[Path] = [conf_dir / rcfile for conf_dir in config_dirs]
-    for sub_section_file in ('pyproject.toml', 'setup.cfg'):
-        config_heir.append(config_dirs[-1] / sub_section_file)
-    return config_heir
+        dom_order.extend(self.locations(kwargs.get('cname'))['user_loc'])
+        dom_order.extend(self.locations(kwargs.get('cname'))['root_loc'])
+        dom_order.extend(self.locations(kwargs.get('cname'))['shipped'])
+        permargs = {
+            key: val
+            for key, val in kwargs.items()
+            if key in ('mode', 'dir_fs', 'effective_ids', 'follow_symlinks')
+        }
+        permargs = {**self.permargs, **permargs}
+        dom_order = list(filter(lambda x: fs_perm(x, **permargs), dom_order))
+        if dom_start:
+            return dom_order
+        return list(reversed(dom_order))
 
+    def safe_config(self,
+                    ext: Union[str, List[str]] = None,
+                    **kwargs) -> List[Path]:
+        """
+        Locate safe writable paths of configuration files.
 
-def xdg_config() -> List[Path]:
-    """
-    Get XDG_CONFIG_HOME locations.
+           - Doesn't care about accessibility or existance of locations.
+           - User must catch:
+              - ``PermissionError``
+              - ``IsADirectoryError``
+              - ``FileNotFoundError``
+           - Improper locations (*~/.project*) are deliberately dropped
+           - Recommendation: Try saving your configuration in in reversed order
 
-    `specifications
-    <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
+        Args:
+            ext: extension filter(s)
+            **kwargs:
+                - custom: custom location
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  __init__.py. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - cname: name of config file
+                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
 
-    Returns:
-        List of xdg-config Paths
-            First directory is most dominant
-    """
-    return xdg_base('CONFIG')
+        Returns:
+            Paths: First path is most dominant
 
-
-def locate_config(project: str,
-                  custom: os.PathLike = None,
-                  ancestors: bool = False,
-                  cname: str = 'config',
-                  py_bin: os.PathLike = None) -> List[Path]:
-    """
-    Locate configurations at standard locations.
-
-    Args:
-        project: name of project whose configuration is being fetched
-        custom: custom location for configuration
-        ancestors: inherit ancestor directories that contain __init__.py
-        cname: name of config file
-        py_bin: namespace.__file__ that imports this function
-
-    Returns:
-        List of all possible configuration paths:
-            Existing and non-existing
-            First directory is most dominant
-
-    """
-    _custom_p = Path(custom).parent if custom else None
-    config_dirs = locate_base(project, _custom_p, ancestors, 'CONFIG', py_bin)
-    # missing: filename, .{project}RC /cname config/cname
-    # Preference of configurations *Most dominant first*
-    config_heir: List[Path] = []
-    for conf_dir in config_dirs:
-        # config in ancestor files should be an rc file
-        if (conf_dir in Path('.').resolve().parents
-                or conf_dir == Path('.').resolve()):
-            if conf_dir == _custom_p:
-                config_heir.append(conf_dir /
-                                   Path(custom).name)  # type: ignore
-            else:
-                config_heir.append(conf_dir / f'.{project}rc')
-        else:
-            # non-ancestor
-            for ext in '.yml', '.yaml', '.toml', '.conf':
-                config_heir.append((conf_dir / cname).with_suffix(ext))
-
-    # environment variable
-    rc_val = os.environ.get(project.upper() + 'RC')
-    if rc_val is not None:
-        if not Path(rc_val).is_file():
-            raise FileNotFoundError(
-                f'RC configuration file: {rc_val} not found')
-        insert_pos = 1 if custom else 0
-        config_heir.insert(insert_pos, Path(rc_val))
-
-    return config_heir
-
-
-def safe_config(project: str,
-                custom: os.PathLike = None,
-                ext: Union[str, List[str]] = None,
-                ancestors: bool = False,
-                cname: str = 'config') -> List[Path]:
-    """
-    Locate safe writable paths of configuration files.
-
-       - Doesn't care about accessibility or existance of locations.
-       - User must catch:
-          - ``PermissionError``
-          - ``IsADirectoryError``
-          - ``FileNotFoundError``
-       - Recommendation: Try saving your configuration in in reversed order.
-
-    Args:
-        project: name of project whose configuration is being fetched
-        custom: custom location for configuration
-        ext: extension filter(s)
-        ancestors: inherit ancestor directories that contain ``__init__.py``
-        cname: name of config file
-
-    Returns:
-        Paths: First path is most dominant
-
-    """
-    if isinstance(ext, str):
-        ext = [ext]
-    safe_paths: List[Path] = []
-    for loc in locate_config(project, custom, ancestors, cname):
-        if any(private in str(loc)
-               for private in ('site-packages', 'venv', '/etc', 'setup',
-                               'pyproject')):
-            continue
-        if ext and loc.suffix and loc.suffix not in list(ext):
-            continue
-        if _fs_perm(loc):
+        """
+        kwargs['mode'] = kwargs.get('mode', 2)
+        if isinstance(ext, str):
+            ext = [ext]
+        safe_paths: List[Path] = []
+        for loc in self.get_conf(**kwargs):
+            if any(private in str(loc)
+                   for private in ('site-packages', 'venv', '/etc', 'setup',
+                                   'pyproject')):
+                continue
+            if ext and loc.suffix and loc.suffix not in list(ext):
+                continue
             safe_paths.append(loc)
-    return safe_paths
+        return safe_paths
 
+    def read_config(self,
+                    flatten: bool = False,
+                    **kwargs) -> Dict[Path, Dict[str, Any]]:
+        """
+        Locate Paths to standard directories and parse config.
 
-def read_config(project: str,
-                custom: os.PathLike = None,
-                ancestors: bool = False,
-                cname: str = 'config',
-                py_bin: os.PathLike = None) -> Dict[Path, Dict[str, Any]]:
-    """
-    Locate Paths to standard directories and parse config.
+        Args:
+            flatten: superimpose configurations to return the final outcome
+            **kwargs:
+                - custom: custom location
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  __init__.py. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - cname: name of config file
+                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
 
-    Args:
-        project: name of project whose configuration is being fetched
-        custom: custom location for configuration
-        ancestors: inherit ancestor directories that contain __init__.py
-        cname: name of config file
-        py_bin: namespace.__file__ that imports this function
+        Returns:
+            parsed configuration from each available file:
+            first file is most dominant
 
-    Returns:
-        parsed configuration from each available file:
-        first file is most dominant
+        Raises:
+            BadConf- Bad configuration file format
 
-    Raises:
-        BadConf- Bad configuration file format
+        """
+        kwargs['mode'] = kwargs.get('mode', 4)
+        avail_confs: Dict[Path, Dict[str, Any]] = {}
+        # load configs from oldest ancestor to current directory
+        for config in self.get_conf(**kwargs):
+            try:
+                avail_confs[config] = parse_rc(config, project=self.project)
+            except (PermissionError, FileNotFoundError, IsADirectoryError):
+                pass
 
-    """
-    avail_confs: Dict[Path, Dict[str, Any]] = {}
-    # load configs from oldest ancestor to current directory
-    for config in locate_config(project, custom, ancestors, cname, py_bin):
-        try:
-            avail_confs[config] = _parse_rc(config)
-        except (PermissionError, FileNotFoundError, IsADirectoryError):
-            pass
+        if not flatten:
+            return avail_confs
 
-    # initialize with config
-    return avail_confs
+        super_config: Dict[str, Any] = {}
+        for config in avail_confs.values():
+            super_config.update(config)
+        return {list(avail_confs.keys())[-1]: super_config}
 
+    def write_config(self,
+                     data: Dict[str, Any],
+                     force: str = 'fail',
+                     **kwargs) -> bool:
+        """
+        Write data to a safe configuration file.
 
-def write_config(data: Dict[str, Any],
-                 project: str,
-                 ancestors: bool = False,
-                 force: str = 'fail',
-                 **kwargs) -> bool:
-    """
-    Write data to a safe configuration file.
+        Args:
+            data: serial data to save
+            force: force overwrite {'overwrite','update','fail'}
+            **kwargs:
+                - custom: custom location
+                - cname: name of config file
+                - ext: extension restriction filter(s)
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  __init__.py. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
 
-    Args:
-        data: serial data to save
-        project: project name
-        ancestors: inherit ancestor directories that contain __init__.py
-        force: force overwrite {'overwrite', 'update', 'fail'}
-        **kwargs:
-            custom: custom configuration file
-            ext: extension restriction filter(s)
-            cname: custom configuration filename
-
-    Returns: success
-    """
-    config_l = list(
-        reversed(
-            safe_config(project,
-                        custom=kwargs.get('custom'),
-                        ext=kwargs.get('ext'),
-                        ancestors=ancestors,
-                        cname=kwargs.get('cname', 'config'))))
-    for config in config_l:
-        try:
-            return _write_rc(data, config, force=force)
-        except (PermissionError, IsADirectoryError, FileNotFoundError):
-            continue
-    return False
+        Returns: success
+        """
+        config_l = list(
+            reversed(self.safe_config(ext=kwargs.get('ext'), **kwargs)))
+        for config in config_l:
+            try:
+                return write_rc(data, config, force=force)
+            except (PermissionError, IsADirectoryError, FileNotFoundError):
+                continue
+        return False

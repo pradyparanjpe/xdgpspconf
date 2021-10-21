@@ -1,5 +1,6 @@
 include *.txt
 include *.rst
+recursive-include xdgpspconf *.yml
 recursive-include tests *
 recursive-exclude tests .coverage
 recursive-exclude tests .pytest_cache/**

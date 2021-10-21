@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -32,23 +32,36 @@ def _cli() -> ArgumentParser:
     """
     parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
     # python bash/zsh completion
-    parser.add_argument('project',
+    parser.add_argument('-b',
+                        '--base',
                         type=str,
-                        help='project whose configuration is sought')
+                        default='config',
+                        help='base-type sought',
+                        choices=('cache', 'config', 'data', 'state'))
     parser.add_argument('-c',
                         '--custom',
                         type=str,
-                        help='custom configuration location')
+                        help='custom configuration path')
+    parser.add_argument('-m',
+                        '--mode',
+                        type=str,
+                        default='',
+                        help='filter by permission mode',
+                        choices=('', 'x', 'w', 'wx', 'r', 'rx', 'rw', 'rwx'))
     parser.add_argument('-n',
                         '--cname',
                         type=str,
                         default='config',
                         help='''Name of config file [default: config]
                         XDG_CONFIG_HOME/PROJECT/CNAME.(yml|toml|cfg)''')
-    parser.add_argument('-a',
-                        '--ancestors',
+    parser.add_argument('-e', '--ext', type=str, help='restrict to extensions')
+    parser.add_argument('-t',
+                        '--trace-pwd',
                         action='store_true',
                         help='inherit ancestoral path configurations')
+    parser.add_argument('project',
+                        type=str,
+                        help='project whose configuration is sought')
     autocomplete(parser)
     return parser
 

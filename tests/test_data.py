@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -25,10 +25,12 @@ import sys
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf.data import ancestral_data, locate_data, xdg_data
+from xdgpspconf import FsDisc
 
 
 class TestData(TestCase):
+    data_disc = FsDisc(project='test', base='data', shipped=Path(__file__))
+
     def setUp(self):
         pass
 
@@ -38,25 +40,25 @@ class TestData(TestCase):
     def test_locations(self):
         proj = 'test'
         self.assertNotIn(
-            Path(__file__).resolve().parent.parent, locate_data(proj))
+            Path(__file__).resolve().parent.parent, self.data_disc.get_loc())
         self.assertIn(
             Path(__file__).resolve().parent.parent,
-            locate_data('test', ancestors=True))
+            self.data_disc.get_loc(trace_pwd=True))
         if sys.platform.startswith('win'):
             home = Path(os.environ['USER'])
             xdgconfig = Path(os.environ.get('APPDATA', home / 'AppData'))
         else:
             home = Path(os.environ['HOME'])
             xdgconfig = Path(os.environ.get('APPDATA', home / '.local/share'))
-        self.assertIn(xdgconfig / proj, locate_data('test', ancestors=True))
+        self.assertIn(xdgconfig / proj, self.data_disc.get_loc(trace_pwd=True))
 
     def test_ancestors(self):
-        self.assertNotIn(
+        self.assertIn(
             Path(__file__).resolve().parent,
-            ancestral_data(Path('.').resolve()))
+            self.data_disc.trace_ancestors(Path('.').resolve()))
         self.assertIn(
             Path(__file__).resolve().parent.parent,
-            ancestral_data(Path('.').resolve()))
+            self.data_disc.trace_ancestors(Path('.').resolve()))
 
     def test_local(self):
         if sys.platform.startswith('win'):
@@ -64,5 +66,26 @@ class TestData(TestCase):
             xdgconfig = Path(os.environ.get('APPDATA', home / 'AppData'))
         else:
             home = Path(os.environ['HOME'])
-            xdgconfig = Path(os.environ.get('APPDATA', home / '.local/share'))
-        self.assertIn(xdgconfig, xdg_data())
+            xdgconfig = Path(
+                os.environ.get('APPDATA', home / '.local/share/test'))
+        self.assertIn(xdgconfig, self.data_disc.user_xdg_loc())
+
+    def test_custom(self):
+        self.assertIn(
+            Path(__file__).resolve().parent.parent,
+            self.data_disc.get_loc(
+                custom=Path(__file__).resolve().parent.parent))
+
+
+class TestBase(TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_cache(self):
+        FsDisc('test', base='cache', shipped=Path(__file__))
+
+    def test_state(self):
+        FsDisc('test', 'state', shipped=Path(__file__))

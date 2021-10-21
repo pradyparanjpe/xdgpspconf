@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2020-2021 Pradyumna Paranjape
+# Copyright © 2021 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -23,7 +23,7 @@ Command-line Callable.
 module executable script: python3 -m xdgpspconf
 """
 
-from xdgpspconf import read_config
+from xdgpspconf import ConfDisc, FsDisc
 from xdgpspconf.command_line import cli
 
 
@@ -36,10 +36,30 @@ def main():
     which are returned by ``config.read_config``.
     """
     cli_args = cli()
-    for conf_file, config in read_config(**cli_args).items():
-        print(f'config file: {conf_file}')
-        print('config:')
-        print(config)
+    if cli_args['base'] != 'config':
+        discoverer = FsDisc(project=cli_args['project'],
+                            base=cli_args['base'],
+                            shipped=None,
+                            mode=cli_args['mode'])
+        for path in discoverer.get_loc(
+                custom=cli_args.get('custom', None),
+                trace_pwd=cli_args.get('trace_pwd', False),
+                improper=cli_args.get('improper', False),
+                mode=cli_args.get('mode', 0)):
+            print('Path:', path)
+    else:
+        discoverer = ConfDisc(project=cli_args['project'],
+                              shipped=None,
+                              mode=cli_args['mode'])
+        for config_file, config in discoverer.read_config(
+                custom=cli_args.get('custom', None),
+                trace_pwd=cli_args.get('trace_pwd', False),
+                cname=cli_args.get('cname', 'config'),
+                mode=cli_args.get('mode', 0)).items():
+            print(f'{config_file = }')
+            for key, value in config.items():
+                print(f'{key}: {value}')
+
     return 0
 
 

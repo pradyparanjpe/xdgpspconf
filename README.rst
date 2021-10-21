@@ -29,7 +29,12 @@ Handle platform suited xdg-base to
          - yaml
          - toml
          - conf (ini)
-   - Locate standard data directories
+   - Write configuration to most general, writable xdg-location
+   - Locate standard directories:
+      - xdg_cache
+      - xdg_config
+      - xdg_data
+      - xdg_state
 
 
 What does it do
@@ -50,17 +55,12 @@ What does it do
          - project root is the directory that contains ``setup.cfg`` or ``setup.py``
          - mountpoint is checked using ``pathlib.Path.drive`` on windows or ``pathlib.Path.is_mount()`` on POSIX
 
-- Lists all possible data-locations (existing and prospective)
+- Lists possible xdg-locations (existing and prospective)
 
-.. note::
-
+   - ``XDG_CACHE_HOME`` is supported for cache locations
    - ``XDG_CONFIG_HOME``, ``XDG_CONFIG_DIRS`` are supported for configuration locations
    - ``XDG_DATA_HOME``, ``XDG_DATA_DIRS`` are supported for data locations
-
-.. warning::
-
-   - ``XDG_STATE_HOME``, ``XDG_CACHE_HOME`` are **NOT** currently supported, and should be added in future.
-
+   - ``XDG_STATE_HOME``, ``XDG_STATE_DIRS`` are supported for state locations
 
 
 .. |Pipeline| image:: https://gitlab.com/pradyparanjpe/xdgpspconf/badges/master/pipeline.svg
