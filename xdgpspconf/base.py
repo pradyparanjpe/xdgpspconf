@@ -206,9 +206,6 @@ class FsDisc():
         """
         Get XDG_<BASE>_HOME locations.
 
-        `specifications
-        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
-
         Returns:
             List of xdg-<base> Paths
                 First directory is most dominant
@@ -239,9 +236,6 @@ class FsDisc():
     def root_xdg_loc(self) -> List[Path]:
         """
         Get ROOT's counterparts of XDG_<BASE>_HOME locations.
-
-        `specifications
-        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
 
         Returns:
             List of root-<base> Paths (parents to project's base)

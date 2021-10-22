@@ -36,6 +36,11 @@ Handle platform suited xdg-base to
       - xdg_data
       - xdg_state
 
+XDG Specification
+---------------------
+
+View xdg specifications `here <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__.
+
 
 What does it do
 --------------------
@@ -61,6 +66,13 @@ What does it do
    - ``XDG_CONFIG_HOME``, ``XDG_CONFIG_DIRS`` are supported for configuration locations
    - ``XDG_DATA_HOME``, ``XDG_DATA_DIRS`` are supported for data locations
    - ``XDG_STATE_HOME``, ``XDG_STATE_DIRS`` are supported for state locations
+
+TODO
+===========
+- Implementation for following variables:
+   - XDG_RUNTIME_DIR
+   - `Other <https://www.freedesktop.org/software/systemd/man/pam_systemd.html>`__ XDG specifications.
+   - Arbitrarily defined **XDG_.*** environment variables
 
 
 .. |Pipeline| image:: https://gitlab.com/pradyparanjpe/xdgpspconf/badges/master/pipeline.svg

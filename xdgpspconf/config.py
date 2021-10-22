@@ -24,6 +24,16 @@ Read:
    - current directory and ancestors
    - custom location
 
+Following kwargs are defined for some functions as indicated:
+   - custom: custom location
+   - cname: name of config file
+   - ext: extension restriction filter(s)
+   - trace_pwd: when supplied, walk up to mountpoint or project-root and
+     inherit all locations that contain __init__.py. Project-root is
+     identified by discovery of ``setup.py`` or ``setup.cfg``. Mountpoint is
+     ``is_mount`` in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+   - kwargs of :py:meth:`xdgpspconf.utils.fs_perm`: passed on
+
 """
 
 import os
@@ -50,6 +60,7 @@ class ConfDisc(FsDisc):
 
         Args:
             cname: name of configuration file
+
         Returns:
             named dictionary containing respective list of Paths
         """
@@ -99,9 +110,6 @@ class ConfDisc(FsDisc):
         """
         Get XDG_<BASE>_HOME locations.
 
-        `specifications
-        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
-
         Args:
             cname: name of config file
 
@@ -124,9 +132,6 @@ class ConfDisc(FsDisc):
         """
         Get ROOT's counterparts of XDG_<BASE>_HOME locations.
 
-        `specifications
-        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
-
         Args:
             cname: name of config file
 
@@ -148,9 +153,6 @@ class ConfDisc(FsDisc):
     def improper_loc(self, cname: str = 'config') -> List[Path]:
         """
         Get ROOT's counterparts of XDG_<BASE>_HOME locations.
-
-        `specifications
-        <https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html>`__
 
         Args:
             cname: name of config file
@@ -180,15 +182,10 @@ class ConfDisc(FsDisc):
         Args:
             dom_start: when ``False``, end with most dominant
             improper: include improper locations such as *~/.project*
-            **kwargs:
-                - custom: custom location
-                - trace_pwd: when supplied, walk up to mountpoint or
-                  project-root and inherit all locations that contain
-                  __init__.py. Project-root is identified by discovery of
-                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
-                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - cname: name of config file
-                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+            **kwargs
+
+        Returns:
+            List of configuration paths
         """
         dom_order: List[Path] = []
 
@@ -245,15 +242,7 @@ class ConfDisc(FsDisc):
 
         Args:
             ext: extension filter(s)
-            **kwargs:
-                - custom: custom location
-                - trace_pwd: when supplied, walk up to mountpoint or
-                  project-root and inherit all locations that contain
-                  __init__.py. Project-root is identified by discovery of
-                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
-                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - cname: name of config file
-                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+            **kwargs
 
         Returns:
             Paths: First path is most dominant
@@ -281,15 +270,7 @@ class ConfDisc(FsDisc):
 
         Args:
             flatten: superimpose configurations to return the final outcome
-            **kwargs:
-                - custom: custom location
-                - trace_pwd: when supplied, walk up to mountpoint or
-                  project-root and inherit all locations that contain
-                  __init__.py. Project-root is identified by discovery of
-                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
-                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - cname: name of config file
-                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+            **kwargs
 
         Returns:
             parsed configuration from each available file:
@@ -326,16 +307,7 @@ class ConfDisc(FsDisc):
         Args:
             data: serial data to save
             force: force overwrite {'overwrite','update','fail'}
-            **kwargs:
-                - custom: custom location
-                - cname: name of config file
-                - ext: extension restriction filter(s)
-                - trace_pwd: when supplied, walk up to mountpoint or
-                  project-root and inherit all locations that contain
-                  __init__.py. Project-root is identified by discovery of
-                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
-                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+            **kwargs
 
         Returns: success
         """

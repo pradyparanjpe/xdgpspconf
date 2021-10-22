@@ -27,6 +27,6 @@ XDG Platform Suited Project CONFiguration.
 from xdgpspconf.base import FsDisc
 from xdgpspconf.config import ConfDisc
 
-__version__ = '0!0.1.1'
+__version__ = '0!0.1.2'
 
-__all__ = ['ConfigDisc', 'FsDisc', 'XDG']
+__all__ = ['ConfDisc', 'FsDisc', 'XDG']
