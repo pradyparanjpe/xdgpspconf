@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021 Pradyumna Paranjape
+# Copyright © 2021, 2022 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -51,6 +51,7 @@ class ConfDisc(FsDisc):
 
     Each location is config file, NOT directory as with FsDisc
     """
+
     def __init__(self, project: str, shipped: os.PathLike = None, **permargs):
         super().__init__(project, base='config', shipped=shipped, **permargs)
 
@@ -97,6 +98,8 @@ class ConfDisc(FsDisc):
         """
         config = []
         pedigree = super().trace_ancestors(child_dir)
+        if child_dir not in pedigree:
+            pedigree = [child_dir, *pedigree]
         config.extend(
             (config_dir / f'.{self.project}rc' for config_dir in pedigree))
 
@@ -182,7 +185,15 @@ class ConfDisc(FsDisc):
         Args:
             dom_start: when ``False``, end with most dominant
             improper: include improper locations such as *~/.project*
-            **kwargs
+            **kwargs:
+                - custom: custom location
+                - cname: name of configuration file. Default: 'config'
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  ``__init__.py``. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
         Returns:
             List of configuration paths
@@ -242,7 +253,16 @@ class ConfDisc(FsDisc):
 
         Args:
             ext: extension filter(s)
-            **kwargs
+            **kwargs:
+                - custom: custom location
+                - cname: name of configuration file. Default: 'config'
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  ``__init__.py``. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
+
 
         Returns:
             Paths: First path is most dominant
@@ -270,7 +290,15 @@ class ConfDisc(FsDisc):
 
         Args:
             flatten: superimpose configurations to return the final outcome
-            **kwargs
+            **kwargs:
+                - custom: custom location
+                - cname: name of configuration file. Default: 'config'
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  ``__init__.py``. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
         Returns:
             parsed configuration from each available file:
@@ -295,7 +323,7 @@ class ConfDisc(FsDisc):
         super_config: Dict[str, Any] = {}
         for config in reversed(list(avail_confs.values())):
             super_config.update(config)
-        return {list(avail_confs.keys())[0]: super_config}
+        return {Path('.').resolve(): super_config}
 
     def write_config(self,
                      data: Dict[str, Any],

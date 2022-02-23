@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021 Pradyumna Paranjape
+# Copyright © 2021, 2022 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -132,6 +132,7 @@ class FsDisc():
         permargs: Dict[str, Any]: permission arguments
 
     """
+
     def __init__(self,
                  project: str,
                  base: str = 'data',
@@ -287,7 +288,7 @@ class FsDisc():
                   ``__init__.py``. Project-root is identified by discovery of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - :py:meth:`xdgpspconf.utils.fs_perm` kwargs: passed on
+                - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
         """
         dom_order: List[Path] = []
 

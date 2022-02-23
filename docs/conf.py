@@ -20,11 +20,11 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'xdgpspconf'
-copyright = '2021, Pradyumna Paranjape'
+copyright = '2021, 2022, Pradyumna Paranjape'
 author = 'Pradyumna Paranjape'
 
 # The full version, including alpha/beta/rc tags
-release = '0!0.1.2'
+release = '0!0.1.3'
 
 # -- General configuration ---------------------------------------------------
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021 Pradyumna Paranjape
+# Copyright © 2021, 2022 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -20,17 +20,21 @@
 """
 Command line inputs
 """
+import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from pathlib import Path
 
 from argcomplete import autocomplete
+
+from xdgpspconf import __version__
 
 
 def _cli() -> ArgumentParser:
     """
     Parser for autodoc
     """
-    parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
+    parser = ArgumentParser(prog='xdgpspconf',
+                            formatter_class=RawDescriptionHelpFormatter)
     # python bash/zsh completion
     parser.add_argument('-b',
                         '--base',
@@ -66,6 +70,12 @@ def _cli() -> ArgumentParser:
     parser.add_argument('project',
                         type=str,
                         help='project whose configuration is sought')
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s ' + ' '.join(
+            (__version__, 'form', str(Path(__file__).resolve().parent),
+             f'(python {sys.version_info.major}.{sys.version_info.minor})')))
     autocomplete(parser)
     return parser
 

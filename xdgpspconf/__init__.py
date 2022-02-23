@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021 Pradyumna Paranjape
+# Copyright © 2021, 2022 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -27,6 +27,6 @@ XDG Platform Suited Project CONFiguration.
 from xdgpspconf.base import FsDisc
 from xdgpspconf.config import ConfDisc
 
-__version__ = '0!0.1.2'
+__version__ = '0!0.1.3'
 
-__all__ = ['ConfDisc', 'FsDisc', 'XDG']
+__all__ = ['ConfDisc', 'FsDisc']

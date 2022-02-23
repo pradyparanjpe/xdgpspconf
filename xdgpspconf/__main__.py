@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021 Pradyumna Paranjape
+# Copyright © 2021, 2022 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
