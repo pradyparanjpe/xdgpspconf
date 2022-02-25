@@ -17,16 +17,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Discovery base
-
-"""
+"""Discovery base"""
 
 import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 
@@ -35,18 +32,18 @@ from xdgpspconf.utils import fs_perm, is_mount
 
 @dataclass
 class XdgVar():
-    """
-    xdg-defined variable
-    """
+    """xdg-defined variable"""
     var: str = ''
+    """XDG variable name"""
     dirs: Optional[str] = None
+    """XDG variable list"""
     root: List[str] = field(default_factory=list)
+    """root locations"""
     default: List[str] = field(default_factory=list)
+    """default location"""
 
     def update(self, master: Dict[str, Any]):
-        """
-        Update values
-        """
+        """Update values"""
         for key, val in master.items():
             if key not in self.__dict__:
                 raise KeyError(f'{key} is not a recognised key')
@@ -55,11 +52,11 @@ class XdgVar():
 
 @dataclass
 class PlfmXdg():
-    """
-    Platform Suited Variables
-    """
+    """Platform Suited Variables"""
     win: XdgVar = XdgVar()
+    """Windows variables"""
     posix: XdgVar = XdgVar()
+    """POSIX variables"""
 
 
 def extract_xdg():
@@ -126,21 +123,21 @@ class FsDisc():
         **permargs: all (arguments to :py:meth:`os.access`) are passed to
             :py:meth:`xdgpspconf.utils.fs_perm`
 
-    Attributes:
-        project: str: project under consideration
-        xdg: PlfmXdg: cross-platform xdg variables
-        permargs: Dict[str, Any]: permission arguments
-
     """
 
     def __init__(self,
                  project: str,
                  base: str = 'data',
-                 shipped: os.PathLike = None,
+                 shipped: Union[Path, str] = None,
                  **permargs):
         self.project = project
+        """project under consideration"""
+
         self.permargs = permargs
+        """permission arguments"""
+
         self.shipped = Path(shipped).resolve().parent if shipped else None
+        """location of developer-shipped files"""
         self._xdg: PlfmXdg = XDG[base]
 
     def locations(self) -> Dict[str, List[Path]]:
@@ -159,6 +156,7 @@ class FsDisc():
 
     @property
     def xdg(self) -> PlfmXdg:
+        """cross-platform xdg variables"""
         return self._xdg
 
     @xdg.setter
@@ -321,3 +319,43 @@ class FsDisc():
         if dom_start:
             return dom_order
         return list(reversed(dom_order))
+
+    def safe_loc(self, **kwargs) -> List[Path]:
+        """
+        Locate safe writeable paths.
+
+           - Doesn't care about accessibility or existence of locations.
+           - User must catch:
+              - ``PermissionError``
+              - ``IsADirectoryError``
+              - ``FileNotFoundError``
+           - Improper locations (*~/.project*) are deliberately dropped
+           - Recommendation: Try writing in reversed order
+
+        Args:
+            ext: extension filter(s)
+            **kwargs:
+                - custom: custom location
+                - trace_pwd: when supplied, walk up to mountpoint or
+                  project-root and inherit all locations that contain
+                  ``__init__.py``. Project-root is identified by discovery of
+                  ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
+                  in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
+
+
+        Returns:
+            Paths: First path is most dominant
+
+        """
+        kwargs['mode'] = kwargs.get('mode', 2)
+
+        # filter private locations
+        private_locs = ['site-packages', 'venv', '/etc', 'setup', 'pyproject']
+        if self.shipped is not None:
+            private_locs.append(str(self.shipped))
+
+        safe_paths = filter(
+            lambda x: not any(private in str(x) for private in private_locs),
+            self.get_loc(**kwargs))
+        return list(safe_paths)

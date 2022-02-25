@@ -53,13 +53,14 @@ class TestRead(TestCase):
 
 
 class TestSafeConfig(TestCase):
-    conf_disc = ConfDisc('test', Path(__file__), mode='w')
+    conf_disc = ConfDisc('test', mode='w')
 
     def test_ancestors(self):
         """
         check that locations are returned
         """
-        data_locs = self.conf_disc.safe_config(ext='.yml', trace_pwd=True)
+        data_locs = self.conf_disc.safe_config(trace_pwd=True)
+        print(Path('.').resolve())
         print(data_locs)
         self.assertIn(Path('./.testrc').resolve(), data_locs)
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)

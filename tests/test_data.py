@@ -78,6 +78,7 @@ class TestData(TestCase):
 
 
 class TestBase(TestCase):
+
     def setUp(self):
         pass
 
@@ -89,3 +90,23 @@ class TestBase(TestCase):
 
     def test_state(self):
         FsDisc('test', 'state', shipped=Path(__file__))
+
+
+class TestSafeLoc(TestCase):
+    conf_disc = FsDisc('test', 'data', mode='w')
+
+    def test_ancestors(self):
+        """
+        check that locations are returned
+        """
+        data_locs = self.conf_disc.safe_loc(trace_pwd=True)
+        print(Path('.').resolve())
+        print(data_locs)
+        self.assertIn(Path('.').resolve(), data_locs)
+
+    def test_wo_ancestors(self):
+        """
+        check that locations are returned
+        """
+        data_locs = self.conf_disc.safe_loc()
+        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)

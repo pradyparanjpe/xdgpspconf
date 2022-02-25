@@ -52,7 +52,10 @@ class ConfDisc(FsDisc):
     Each location is config file, NOT directory as with FsDisc
     """
 
-    def __init__(self, project: str, shipped: os.PathLike = None, **permargs):
+    def __init__(self,
+                 project: str,
+                 shipped: Union[Path, str] = None,
+                 **permargs):
         super().__init__(project, base='config', shipped=shipped, **permargs)
 
     def locations(self, cname: str = None) -> Dict[str, List[Path]]:
@@ -241,7 +244,7 @@ class ConfDisc(FsDisc):
                     ext: Union[str, List[str]] = None,
                     **kwargs) -> List[Path]:
         """
-        Locate safe writable paths of configuration files.
+        Locate safe writeable paths of configuration files.
 
            - Doesn't care about accessibility or existance of locations.
            - User must catch:
@@ -269,18 +272,21 @@ class ConfDisc(FsDisc):
 
         """
         kwargs['mode'] = kwargs.get('mode', 2)
+
+        # filter private locations
+        private_locs = ['site-packages', 'venv', '/etc', 'setup', 'pyproject']
+        if self.shipped is not None:
+            private_locs.append(str(self.shipped))
+        safe_paths = filter(
+            lambda x: not any(private in str(x) for private in private_locs),
+            self.get_conf(**kwargs))
+        if ext is None:
+            return list(safe_paths)
+
+        # filter extensions
         if isinstance(ext, str):
             ext = [ext]
-        safe_paths: List[Path] = []
-        for loc in self.get_conf(**kwargs):
-            if any(private in str(loc)
-                   for private in ('site-packages', 'venv', '/etc', 'setup',
-                                   'pyproject')):
-                continue
-            if ext and loc.suffix and loc.suffix not in list(ext):
-                continue
-            safe_paths.append(loc)
-        return safe_paths
+        return list(filter(lambda x: x.suffix in ext, safe_paths))
 
     def read_config(self,
                     flatten: bool = False,
