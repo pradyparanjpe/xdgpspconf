@@ -21,13 +21,16 @@
 Test config locations
 """
 
+import os
 from pathlib import Path
 from unittest import TestCase
 
 from xdgpspconf.base import is_mount
+from xdgpspconf.utils import fs_perm
 
 
 class TestMount(TestCase):
+
     def setUp(self):
         pass
 
@@ -39,3 +42,33 @@ class TestMount(TestCase):
 
     def test_nonroot(self):
         self.assertFalse(is_mount(Path('.').resolve()))
+
+
+class TestAccess(TestCase):
+    """Test file access"""
+
+    def setUp(self):
+        self.access_file = Path('./access')
+        with self.access_file.open('w'):
+            pass
+
+    def tearDown(self):
+        self.access_file.unlink()
+
+    def test_read(self):
+        """Read access"""
+        self.assertTrue(fs_perm(self.access_file, 'r'))
+
+    def test_exist(self):
+        """Default mode: check existence (Tautology)"""
+        self.assertTrue(fs_perm(self.access_file))
+
+    def test_ancestor(self):
+        """Test if ancestor is checked if leaf doesn't exist"""
+        self.assertTrue(fs_perm(Path('./new_file'), 'r'))
+
+    def test_setbit(self):
+        """Unrecognised key"""
+        with self.assertRaisesRegex(KeyError,
+                                    r'mode: ([0-7]|r|w|x|rw|wx|rx|rwx|)'):
+            fs_perm(self.access_file, 's')

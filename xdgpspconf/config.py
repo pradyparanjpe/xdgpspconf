@@ -38,11 +38,14 @@ Following kwargs are defined for some functions as indicated:
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from xdgpspconf.base import FsDisc
-from xdgpspconf.config_io import CONF_EXT, parse_rc, write_rc
+from xdgpspconf.config_io import parse_rc, write_rc
 from xdgpspconf.utils import fs_perm
+
+CONF_EXT = '.yml', '.yaml', '.toml', '.conf', '.ini'
+"""Extensions that are supported (parsed) by this module"""
 
 
 class ConfDisc(FsDisc):
@@ -101,7 +104,7 @@ class ConfDisc(FsDisc):
         """
         config = []
         pedigree = super().trace_ancestors(child_dir)
-        if child_dir not in pedigree:
+        if child_dir not in pedigree:  # pragma: no cover
             pedigree = [child_dir, *pedigree]
         config.extend(
             (config_dir / f'.{self.project}rc' for config_dir in pedigree))
@@ -201,15 +204,16 @@ class ConfDisc(FsDisc):
         Returns:
             List of configuration paths
         """
+        # NOTE: order of following statements IS important
         dom_order: List[Path] = []
 
         custom = kwargs.get('custom')
         if custom is not None:
-            # don't check
+            # assume existence and proceed
             dom_order.append(Path(custom))
 
         rc_val = os.environ.get(self.project.upper() + 'RC')
-        if rc_val is not None:
+        if rc_val is not None:  # pragma: no cover
             if not Path(rc_val).is_file():
                 raise FileNotFoundError(
                     f'RC configuration file: {rc_val} not found')
@@ -252,7 +256,7 @@ class ConfDisc(FsDisc):
               - ``IsADirectoryError``
               - ``FileNotFoundError``
            - Improper locations (*~/.project*) are deliberately dropped
-           - Recommendation: Try saving your configuration in in reversed order
+           - Recommendation: use dom_start=``False``
 
         Args:
             ext: extension filter(s)
@@ -264,11 +268,12 @@ class ConfDisc(FsDisc):
                   ``__init__.py``. Project-root is identified by discovery of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - dom_start: when ``False``, end with most dominant
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
 
         Returns:
-            Paths: First path is most dominant
+            Safe configuration locations (existing and prospective)
 
         """
         kwargs['mode'] = kwargs.get('mode', 2)
@@ -304,11 +309,11 @@ class ConfDisc(FsDisc):
                   ``__init__.py``. Project-root is identified by discovery of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - dom_start: when ``False``, end with most dominant
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
         Returns:
-            parsed configuration from each available file:
-            first file is most dominant
+            parsed configuration from each available file
 
         Raises:
             BadConf- Bad configuration file format
@@ -334,22 +339,23 @@ class ConfDisc(FsDisc):
     def write_config(self,
                      data: Dict[str, Any],
                      force: str = 'fail',
-                     **kwargs) -> bool:
+                     **kwargs) -> Optional[Path]:
         """
-        Write data to a safe configuration file.
+        Write data to the most global safe configuration file.
 
         Args:
             data: serial data to save
             force: force overwrite {'overwrite','update','fail'}
             **kwargs
 
-        Returns: success
+        Returns: Path to which, configuration was written
         """
-        config_l = list(
-            reversed(self.safe_config(ext=kwargs.get('ext'), **kwargs)))
+        kwargs['dom_start'] = kwargs.get('dom_start', False)
+        config_l = self.safe_config(**kwargs)
         for config in config_l:
             try:
-                return write_rc(data, config, force=force)
+                if write_rc(data, config, force=force):
+                    return config
             except (PermissionError, IsADirectoryError, FileNotFoundError):
                 continue
-        return False
+        return None  # pragma: no cover

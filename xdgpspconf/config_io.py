@@ -31,11 +31,6 @@ import yaml
 
 from xdgpspconf.errors import BadConf
 
-CONF_EXT = '.yml', '.yaml', '.toml', '.conf'
-"""
-Extensions that are supported (parsed) by this module
-"""
-
 
 def parse_yaml(config: Path) -> Dict[str, Any]:
     """
@@ -49,7 +44,7 @@ def parse_yaml(config: Path) -> Dict[str, Any]:
     """
     with open(config, 'r') as rcfile:
         conf: Dict[str, Any] = yaml.safe_load(rcfile)
-    if conf is None:  # pragma: no cover
+    if conf is None:
         raise yaml.YAMLError
     return conf
 

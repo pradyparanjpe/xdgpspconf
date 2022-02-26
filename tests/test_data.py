@@ -26,13 +26,15 @@ from pathlib import Path
 from unittest import TestCase
 
 from xdgpspconf import FsDisc
+from xdgpspconf.base import XdgVar
 
 
 class TestData(TestCase):
-    data_disc = FsDisc(project='test', base='data', shipped=Path(__file__))
 
     def setUp(self):
-        pass
+        self.data_disc = FsDisc(project='test',
+                                base='data',
+                                shipped=Path(__file__))
 
     def tearDown(self):
         pass
@@ -44,28 +46,32 @@ class TestData(TestCase):
         self.assertIn(
             Path(__file__).resolve().parent.parent,
             self.data_disc.get_loc(trace_pwd=True))
+        self.assertEqual(self.data_disc.get_loc()[0],
+                         self.data_disc.get_loc(dom_start=False)[-1])
+        self.assertIn(Path().home() / '.test',
+                      self.data_disc.get_loc(trace_pwd=True, improper=True))
         if sys.platform.startswith('win'):
-            home = Path(os.environ['USER'])
+            home = Path.home()
             xdgconfig = Path(os.environ.get('APPDATA', home / 'AppData'))
         else:
-            home = Path(os.environ['HOME'])
+            home = Path.home()
             xdgconfig = Path(os.environ.get('APPDATA', home / '.local/share'))
         self.assertIn(xdgconfig / proj, self.data_disc.get_loc(trace_pwd=True))
 
     def test_ancestors(self):
         self.assertIn(
             Path(__file__).resolve().parent,
-            self.data_disc.trace_ancestors(Path('.').resolve()))
+            self.data_disc.trace_ancestors(Path.cwd()))
         self.assertIn(
             Path(__file__).resolve().parent.parent,
-            self.data_disc.trace_ancestors(Path('.').resolve()))
+            self.data_disc.trace_ancestors(Path.cwd()))
 
     def test_local(self):
         if sys.platform.startswith('win'):
-            home = Path(os.environ['USER'])
+            home = Path.home()
             xdgconfig = Path(os.environ.get('APPDATA', home / 'AppData'))
         else:
-            home = Path(os.environ['HOME'])
+            home = Path.home()
             xdgconfig = Path(
                 os.environ.get('APPDATA', home / '.local/share/test'))
         self.assertIn(xdgconfig, self.data_disc.user_xdg_loc())
@@ -75,6 +81,25 @@ class TestData(TestCase):
             Path(__file__).resolve().parent.parent,
             self.data_disc.get_loc(
                 custom=Path(__file__).resolve().parent.parent))
+
+    def test_safe_loc_w_trace(self):
+        """
+        check that locations are returned
+        """
+        self.data_disc.shipped = None
+        data_locs = self.data_disc.safe_loc(trace_pwd=True)
+        print(Path.cwd())
+        print(data_locs)
+        self.assertIn(Path.cwd(), data_locs)
+        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
+
+    def test_safe_wo_trace(self):
+        """
+        check that locations are returned
+        """
+        data_locs = self.data_disc.safe_loc()
+        self.assertNotIn(Path.cwd(), data_locs)
+        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
 
 
 class TestBase(TestCase):
@@ -91,22 +116,16 @@ class TestBase(TestCase):
     def test_state(self):
         FsDisc('test', 'state', shipped=Path(__file__))
 
+    def test_setter_Xdg(self):
+        disc = FsDisc('test', 'state', shipped=Path(__file__))
+        _xdg = disc.xdg
+        disc.xdg = _xdg
 
-class TestSafeLoc(TestCase):
-    conf_disc = FsDisc('test', 'data', mode='w')
 
-    def test_ancestors(self):
-        """
-        check that locations are returned
-        """
-        data_locs = self.conf_disc.safe_loc(trace_pwd=True)
-        print(Path('.').resolve())
-        print(data_locs)
-        self.assertIn(Path('.').resolve(), data_locs)
+class TestErrors(TestCase):
 
-    def test_wo_ancestors(self):
-        """
-        check that locations are returned
-        """
-        data_locs = self.conf_disc.safe_loc()
-        self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
+    def test_xdg_nokey(self):
+        """Handle non-recognised key"""
+        with self.assertRaisesRegex(KeyError, 'is not a recognised key'):
+            test_var = XdgVar(var='data')
+            test_var.update({'my_data': 'some_data'})

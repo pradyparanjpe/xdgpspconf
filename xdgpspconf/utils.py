@@ -23,6 +23,7 @@ Common filesystem discovery functions.
 """
 
 import os
+from functools import reduce
 from pathlib import Path
 from typing import Union
 
@@ -32,7 +33,7 @@ def fs_perm(path: Path, mode: Union[int, str] = 0, **permargs):
     Check read, write, execute permissions for effective id.
 
     Args:
-        path: check permissions of this location
+        path: check permissions of this location or latest existing ancestor.
         mode: permissions to check {[0-7],r,w,x,rw,wx,rx,rwx,}
         **permargs:
 
@@ -44,12 +45,10 @@ def fs_perm(path: Path, mode: Union[int, str] = 0, **permargs):
                 - follow_symlinks ``True``
 
     Returns:
-        ``True`` only if permissions are available or if perm is ``0``
+        ``True`` only if permissions are available
     """
-    if mode in ('0', 0, ''):
-        return True
-    mode_letter = {'x': 1, 'w': 2, 'r': 4}
-    mode_code = (None, os.X_OK, os.W_OK, os.W_OK | os.X_OK, os.R_OK,
+    mode_letter = {'x': 1, 'w': 2, 'r': 4, '-': 0}
+    mode_code = (os.F_OK, os.X_OK, os.W_OK, os.W_OK | os.X_OK, os.R_OK,
                  os.R_OK | os.X_OK, os.R_OK | os.W_OK,
                  os.R_OK | os.W_OK | os.X_OK)
 
@@ -57,20 +56,15 @@ def fs_perm(path: Path, mode: Union[int, str] = 0, **permargs):
     oct_mode = 0
     try:
         if isinstance(mode, str):
-            # new in 3.10, use match .. case
+            # NEXT: in 3.10, use match .. case
             # convert to int
-            for p in list(mode):
-                oct_mode += mode_letter[p]
+            oct_mode = reduce(lambda x, y: x | mode_letter[y], mode, 0)
         else:
-            # permissions as integer
+            # permissions supplied as integer
             oct_mode = mode % 8
         _mode = mode_code[oct_mode]
     except KeyError as err:
         raise KeyError(f'{err}\nmode: ([0-7]|r|w|x|rw|wx|rx|rwx|)') from None
-    if _mode is None:
-        # this should never happen
-        # dummy check fallback
-        return True
     while not path.exists():
         path = path.parent
     for default in ('follow_symlinks', 'effective_ids'):

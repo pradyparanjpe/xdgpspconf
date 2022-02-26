@@ -64,7 +64,7 @@ def extract_xdg():
     Read from 'strict'-standard locations.
 
     'Strict' locations:
-       Posix:
+       POSIX:
           - ``<shipped_root>/xdg.yml``
           - ``/etc/xdgpspconf/xdg.yml``
           - ``/etc/xdg/xdgpspconf/xdg.yml``
@@ -76,22 +76,18 @@ def extract_xdg():
     xdg_info = {}
     pspxdg_locs = [Path(__file__).parent / 'xdg.yml']
     config_tail = 'xdgpspconf/xdg.yml'
-    if sys.platform.startswith('win'):
+    if sys.platform.startswith('win'):  # pragma: no cover
         pspxdg_locs.extend(
             (Path(os.environ['APPDATA']) / config_tail,
-             Path(
-                 os.environ.get(
-                     'LOCALAPPDATA',
-                     Path(os.environ['USERPROFILE']) / 'AppData/Local')) /
+             Path(os.environ.get('LOCALAPPDATA',
+                                 Path.home() / 'AppData/Local')) /
              config_tail))
     else:
         pspxdg_locs.extend(
             (Path(__file__).parent / 'xdg.yml', Path('/etc') / config_tail,
              Path('/etc/xdg') / config_tail,
-             Path(
-                 os.environ.get('XDG_CONFIG_HOME',
-                                Path(os.environ['HOME']) / '.config')) /
-             config_tail))
+             Path(os.environ.get('XDG_CONFIG_HOME',
+                                 Path.home() / '.config')) / config_tail))
     for conf_xdg in pspxdg_locs:
         try:
             with open(conf_xdg) as conf:
@@ -209,19 +205,18 @@ class FsDisc():
             List of xdg-<base> Paths
                 First directory is most dominant
         """
+        user_home = Path.home()
         # environment
         if sys.platform.startswith('win'):  # pragma: no cover
             # windows
-            user_home = Path(os.environ['USERPROFILE'])
             os_xdg_loc = os.environ.get(self.xdg.win.var)
             os_default = self.xdg.win.default
         else:
             # assume POSIX
-            user_home = Path(os.environ['HOME'])
             os_xdg_loc = os.environ.get(self.xdg.posix.var)
             os_default = self.xdg.posix.default
-        if os_xdg_loc is None:
-            xdg_base_loc = [Path(user_home / loc) for loc in os_default]
+        if os_xdg_loc is None:  # pragma: no cover
+            xdg_base_loc = [(user_home / loc) for loc in os_default]
         else:
             xdg_base_loc = [Path(loc) for loc in os_xdg_loc.split(os.pathsep)]
         if not sys.platform.startswith('win'):
@@ -246,9 +241,7 @@ class FsDisc():
         else:
             # assume POSIX
             os_root = self.xdg.posix.root
-        if os_root:
-            return [Path(root_base) / self.project for root_base in os_root]
-        return []
+        return [Path(root_base) / self.project for root_base in os_root]
 
     def improper_loc(self) -> List[Path]:
         """
@@ -260,13 +253,7 @@ class FsDisc():
             List of xdg-<base> Paths (parents to project's base)
                 First directory is most dominant
         """
-        # environment
-        if sys.platform.startswith('win'):  # pragma: no cover
-            # windows
-            user_home = Path(os.environ['USERPROFILE'])
-        else:
-            # assume POSIX
-            user_home = Path(os.environ['HOME'])
+        user_home = Path.home()
         return [user_home / (hide + self.project) for hide in ('', '.')]
 
     def get_loc(self,
@@ -330,7 +317,7 @@ class FsDisc():
               - ``IsADirectoryError``
               - ``FileNotFoundError``
            - Improper locations (*~/.project*) are deliberately dropped
-           - Recommendation: Try writing in reversed order
+           - Recommendation: set dom_start = ``False``
 
         Args:
             ext: extension filter(s)
@@ -341,6 +328,7 @@ class FsDisc():
                   ``__init__.py``. Project-root is identified by discovery of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+                - dom_start: when ``False``, end with most dominant
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
 
