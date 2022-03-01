@@ -155,6 +155,7 @@ def write_yaml(data: Dict[str, Any],
         if force == 'update':
             old_data = parse_yaml(config)
     data = {**old_data, **data}
+    config.parent.mkdir(parents=True, exist_ok=True)
     with open(config, 'w') as rcfile:
         yaml.dump(data, rcfile)
     return True
@@ -183,6 +184,7 @@ def write_toml(data: Dict[str, Any],
         if force == 'update':
             old_data = parse_toml(config)
     data = {**old_data, **data}
+    config.parent.mkdir(parents=True, exist_ok=True)
     with open(config, 'w') as rcfile:
         toml.dump(data, rcfile)
     return True
@@ -211,6 +213,7 @@ def write_ini(data: Dict[str, Any], config: Path, force: str = 'fail') -> bool:
     data = {**old_data, **data}
     parser = configparser.ConfigParser()
     parser.update(data)
+    config.parent.mkdir(parents=True, exist_ok=True)
     with open(config, 'w') as rcfile:
         parser.write(rcfile)
     return True

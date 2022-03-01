@@ -31,6 +31,7 @@ class TestConfig(TestCase):
 
     def setUp(self):
         self.conf_disc = ConfDisc('test', mode='w', shipped=__file__)
+        print(self.conf_disc)
 
     def test_order(self):
         self.assertEqual(
@@ -69,10 +70,10 @@ class TestConfig(TestCase):
 
 
 class TestRead(TestCase):
-    conf_disc = ConfDisc('test', __file__, mode='w')
 
     def setUp(self):
-        pass
+        self.conf_disc = ConfDisc('test', __file__, mode='w')
+        print(self.conf_disc)
 
     def tearDown(self):
         pass
@@ -98,26 +99,36 @@ class TestWrite(TestCase):
 
     def setUp(self):
         self.conf_disc = ConfDisc('test', mode='w', shipped=__file__)
+        print(self.conf_disc)
 
     def tearDown(self):
         pass
 
     def test_write(self):
-        for ext in '.yml', '.toml', '.conf':
+        # permission error
+        for ext in '.yml', '.toml', '.conf', None:
             conf_file = self.conf_disc.write_config({},
                                                     'update',
-                                                    dom_start=False,
+                                                    dom_start=True,
                                                     trace_pwd=True,
                                                     ext=ext)
             self.assertIsNotNone(conf_file)
             assert conf_file is not None
-            conf_file.unlink(missing_ok=True)
+            try:
+                # NEXT 3.8: missing_ok=``True``
+                conf_file.unlink()
+            except FileNotFoundError:
+                pass
 
         self.conf_disc.shipped = None
         conf_file = self.conf_disc.write_config({},
                                                 'update',
-                                                dom_start=True,
+                                                dom_start=False,
                                                 custom=Path.cwd())
         self.assertIsNotNone(conf_file)
         assert conf_file is not None
-        conf_file.unlink(missing_ok=True)
+        try:
+            # NEXT 3.8: missing_ok=``True``
+            conf_file.unlink()
+        except FileNotFoundError:
+            pass

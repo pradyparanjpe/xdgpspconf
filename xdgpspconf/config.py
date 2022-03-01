@@ -19,20 +19,22 @@
 """
 Special case of configuration, where base object is a file
 
-Read:
-   - standard xdg-base locations
-   - current directory and ancestors
-   - custom location
-
 Following kwargs are defined for some functions as indicated:
-   - custom: custom location
    - cname: name of config file
    - ext: extension restriction filter(s)
    - trace_pwd: when supplied, walk up to mountpoint or project-root and
      inherit all locations that contain __init__.py. Project-root is
-     identified by discovery of ``setup.py`` or ``setup.cfg``. Mountpoint is
+     identified by existence of ``setup.py`` or ``setup.cfg``. Mountpoint is
      ``is_mount`` in unix or Drive in Windows. If ``True``, walk from ``$PWD``
    - kwargs of :py:meth:`xdgpspconf.utils.fs_perm`: passed on
+
+Most to least- dominant (least to most global) order
+   - custom supplied [Optional]
+   - traced ancestry [Optional]
+   - XDG specification paths
+   - Paths that are improper according to XDG [Optional]
+   - root
+   - shipped
 
 """
 
@@ -42,7 +44,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from xdgpspconf.base import FsDisc
 from xdgpspconf.config_io import parse_rc, write_rc
-from xdgpspconf.utils import fs_perm
+from xdgpspconf.utils import PERMARGS, fs_perm
 
 CONF_EXT = '.yml', '.yaml', '.toml', '.conf', '.ini'
 """Extensions that are supported (parsed) by this module"""
@@ -63,7 +65,7 @@ class ConfDisc(FsDisc):
 
     def locations(self, cname: str = None) -> Dict[str, List[Path]]:
         """
-        Shipped, root, user, improper locations
+        XDG, improper, root, shipped locations
 
         Args:
             cname: name of configuration file
@@ -72,16 +74,13 @@ class ConfDisc(FsDisc):
             named dictionary containing respective list of Paths
         """
         cname = cname or 'config'
+        shipped_loc = [(self.shipped / cname).with_suffix(ext)
+                       for ext in CONF_EXT] if self.shipped else []
         return {
-            'improper':
-            self.improper_loc(cname),
-            'user_loc':
-            self.user_xdg_loc(cname),
-            'root_loc':
-            self.root_xdg_loc(cname),
-            'shipped':
-            [(self.shipped / cname).with_suffix(ext)
-             for ext in CONF_EXT] if self.shipped is not None else []
+            'user_loc': self.user_xdg_loc(cname),
+            'improper': self.improper_loc(cname),
+            'root_loc': self.root_xdg_loc(cname),
+            'shipped': shipped_loc
         }
 
     def trace_ancestors(self, child_dir: Path) -> List[Path]:
@@ -184,30 +183,30 @@ class ConfDisc(FsDisc):
     def get_conf(self,
                  dom_start: bool = True,
                  improper: bool = False,
+                 custom: Path = None,
                  **kwargs) -> List[Path]:
         """
         Get discovered configuration files.
 
         Args:
+            custom: custom location
             dom_start: when ``False``, end with most dominant
             improper: include improper locations such as *~/.project*
             **kwargs:
-                - custom: custom location
                 - cname: name of configuration file. Default: 'config'
                 - trace_pwd: when supplied, walk up to mountpoint or
                   project-root and inherit all locations that contain
-                  ``__init__.py``. Project-root is identified by discovery of
+                  ``__init__.py``. Project-root is identified by existence of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
         Returns:
-            List of configuration paths
+            List of configuration paths with permissions [dom_start]
         """
         # NOTE: order of following statements IS important
         dom_order: List[Path] = []
 
-        custom = kwargs.get('custom')
         if custom is not None:
             # assume existence and proceed
             dom_order.append(Path(custom))
@@ -221,23 +220,25 @@ class ConfDisc(FsDisc):
 
         trace_pwd = kwargs.get('trace_pwd')
         if trace_pwd is True:
-            trace_pwd = Path('.').resolve()
+            trace_pwd = Path.cwd()
         if trace_pwd:
             inheritance = self.trace_ancestors(Path(trace_pwd))
             dom_order.extend(inheritance)
 
         locations = self.locations(kwargs.get('cname'))
+
+        # xdg user locations
+        dom_order.extend(locations['user_loc'])
+
+        # deprecated locations
         if improper:
             dom_order.extend(locations['improper'])
 
-        for loc in ('user_loc', 'root_loc', 'shipped'):
-            dom_order.extend(locations[loc])
+        # read-only locations
+        dom_order.extend(locations['root_loc'])
+        dom_order.extend(locations['shipped'])
 
-        permargs = {
-            key: val
-            for key, val in kwargs.items()
-            if key in ('mode', 'dir_fs', 'effective_ids', 'follow_symlinks')
-        }
+        permargs = {key: val for key, val in kwargs.items() if key in PERMARGS}
         permargs = {**self.permargs, **permargs}
         dom_order = list(filter(lambda x: fs_perm(x, **permargs), dom_order))
         if dom_start:
@@ -246,29 +247,32 @@ class ConfDisc(FsDisc):
 
     def safe_config(self,
                     ext: Union[str, List[str]] = None,
+                    dom_start: bool = True,
+                    mode: Union[str, int] = 2,
                     **kwargs) -> List[Path]:
         """
         Locate safe writeable paths of configuration files.
 
-           - Doesn't care about accessibility or existance of locations.
+           - Doesn't care about accessibility or existence of locations.
            - User must catch:
               - ``PermissionError``
               - ``IsADirectoryError``
               - ``FileNotFoundError``
            - Improper locations (*~/.project*) are deliberately dropped
-           - Recommendation: use dom_start=``False``
+           - Recommendation: use dom_start=``False`` for global storage
 
         Args:
             ext: extension filter(s)
+            dom_start: when ``False``, end with most dominant
+            mode: permission mode to check
             **kwargs:
                 - custom: custom location
                 - cname: name of configuration file. Default: 'config'
                 - trace_pwd: when supplied, walk up to mountpoint or
                   project-root and inherit all locations that contain
-                  ``__init__.py``. Project-root is identified by discovery of
+                  ``__init__.py``. Project-root is identified by existence of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - dom_start: when ``False``, end with most dominant
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
 
@@ -276,15 +280,13 @@ class ConfDisc(FsDisc):
             Safe configuration locations (existing and prospective)
 
         """
-        kwargs['mode'] = kwargs.get('mode', 2)
-
         # filter private locations
         private_locs = ['site-packages', 'venv', '/etc', 'setup', 'pyproject']
         if self.shipped is not None:
             private_locs.append(str(self.shipped))
         safe_paths = filter(
             lambda x: not any(private in str(x) for private in private_locs),
-            self.get_conf(**kwargs))
+            self.get_conf(dom_start=dom_start, mode=mode, **kwargs))
         if ext is None:
             return list(safe_paths)
 
@@ -295,21 +297,23 @@ class ConfDisc(FsDisc):
 
     def read_config(self,
                     flatten: bool = False,
+                    dom_start: bool = True,
                     **kwargs) -> Dict[Path, Dict[str, Any]]:
         """
         Locate Paths to standard directories and parse config.
 
         Args:
             flatten: superimpose configurations to return the final outcome
+            dom_start: when ``False``, end with most dominant
             **kwargs:
                 - custom: custom location
                 - cname: name of configuration file. Default: 'config'
                 - trace_pwd: when supplied, walk up to mountpoint or
                   project-root and inherit all locations that contain
-                  ``__init__.py``. Project-root is identified by discovery of
+                  ``__init__.py``. Project-root is identified by existence of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - dom_start: when ``False``, end with most dominant
+                - improper: include improper locations such as *~/.project*
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
         Returns:
@@ -322,7 +326,7 @@ class ConfDisc(FsDisc):
         kwargs['mode'] = kwargs.get('mode', 4)
         avail_confs: Dict[Path, Dict[str, Any]] = {}
         # load configs from oldest ancestor to current directory
-        for config in self.get_conf(**kwargs):
+        for config in self.get_conf(dom_start=dom_start, **kwargs):
             try:
                 avail_confs[config] = parse_rc(config, project=self.project)
             except (PermissionError, FileNotFoundError, IsADirectoryError):
@@ -334,28 +338,31 @@ class ConfDisc(FsDisc):
         super_config: Dict[str, Any] = {}
         for config in reversed(list(avail_confs.values())):
             super_config.update(config)
-        return {Path('.').resolve(): super_config}
+        return {Path.cwd(): super_config}
 
     def write_config(self,
                      data: Dict[str, Any],
                      force: str = 'fail',
+                     dom_start: bool = True,
                      **kwargs) -> Optional[Path]:
         """
         Write data to the most global safe configuration file.
 
+            - Recommendation: use dom_start=``False`` for global storage
+
         Args:
             data: serial data to save
+            dom_start: when ``False``, end with most dominant
             force: force overwrite {'overwrite','update','fail'}
             **kwargs
 
+
         Returns: Path to which, configuration was written
         """
-        kwargs['dom_start'] = kwargs.get('dom_start', False)
-        config_l = self.safe_config(**kwargs)
-        for config in config_l:
+        for config in self.safe_config(dom_start=dom_start, **kwargs):
             try:
                 if write_rc(data, config, force=force):
                     return config
             except (PermissionError, IsADirectoryError, FileNotFoundError):
                 continue
-        return None  # pragma: no cover
+        return None

@@ -14,6 +14,8 @@ build:
   - python3 -m pip install -U .
   rules:
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_COMMIT_BRANCH == 'develop'
+    allow_failure: true
 
 
 pytest:
@@ -34,6 +36,8 @@ pytest:
       cobertura: tests/coverage.xml
   rules:
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_COMMIT_BRANCH == 'develop'
+    allow_failure: true
 
 
 pages:

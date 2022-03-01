@@ -17,7 +17,25 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""Discovery base"""
+"""
+Base to discover paths
+
+Following kwargs are defined for some functions as indicated:
+   - trace_pwd: when supplied, walk up to mountpoint or project-root and
+     inherit all locations that contain __init__.py. Project-root is
+     identified by existence of ``setup.py`` or ``setup.cfg``. Mountpoint is
+     ``is_mount`` in unix or Drive in Windows. If ``True``, walk from ``$PWD``
+   - kwargs of :py:meth:`xdgpspconf.utils.fs_perm`: passed on
+
+Most to least- dominant (least to most global) order
+   - custom supplied [Optional]
+   - traced ancestry [Optional]
+   - XDG specification paths
+   - Paths that are improper according to XDG [Optional]
+   - root
+   - shipped
+
+"""
 
 import os
 import sys
@@ -27,7 +45,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import yaml
 
-from xdgpspconf.utils import fs_perm, is_mount
+from xdgpspconf.utils import PERMARGS, fs_perm, is_mount
 
 
 @dataclass
@@ -129,26 +147,12 @@ class FsDisc():
         self.project = project
         """project under consideration"""
 
-        self.permargs = permargs
+        self.permargs = {**PERMARGS, **permargs}
         """permission arguments"""
 
         self.shipped = Path(shipped).resolve().parent if shipped else None
         """location of developer-shipped files"""
         self._xdg: PlfmXdg = XDG[base]
-
-    def locations(self) -> Dict[str, List[Path]]:
-        """
-        Shipped, root, user, improper locations
-
-        Returns:
-            named dictionary containing respective list of Paths
-        """
-        return {
-            'improper': self.improper_loc(),
-            'user_loc': self.user_xdg_loc(),
-            'root_loc': self.root_xdg_loc(),
-            'shipped': [self.shipped] if self.shipped is not None else []
-        }
 
     @property
     def xdg(self) -> PlfmXdg:
@@ -164,6 +168,21 @@ class FsDisc():
         for attr in ('project', 'permargs', 'shipped', 'xdg'):
             r_out.append(f'{attr}: {getattr(self, attr)}')
         return '\n'.join(r_out)
+
+    def locations(self) -> Dict[str, List[Path]]:
+        """
+        Shipped, root, user, improper locations
+
+        Returns:
+            named dictionary containing respective list of Paths
+        """
+        # This is not a property to allow consistent structure for config
+        return {
+            'user_loc': self.user_xdg_loc(),
+            'improper': self.improper_loc(),
+            'root_loc': self.root_xdg_loc(),
+            'shipped': [self.shipped] if self.shipped else []
+        }
 
     def trace_ancestors(self, child_dir: Path) -> List[Path]:
         """
@@ -257,6 +276,7 @@ class FsDisc():
         return [user_home / (hide + self.project) for hide in ('', '.')]
 
     def get_loc(self,
+                custom: Path = None,
                 dom_start: bool = True,
                 improper: bool = False,
                 **kwargs) -> List[Path]:
@@ -266,48 +286,54 @@ class FsDisc():
         Args:
             dom_start: when ``False``, end with most dominant
             improper: include improper locations such as *~/.project*
+            custom: custom location
             **kwargs:
-                - custom: custom location
                 - trace_pwd: when supplied, walk up to mountpoint or
                   project-root and inherit all locations that contain
-                  ``__init__.py``. Project-root is identified by discovery of
+                  ``__init__.py``. Project-root is identified by existence of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
+
+        Returns: base paths with permissions [dom_start]
         """
         dom_order: List[Path] = []
 
-        custom = kwargs.get('custom')
         if custom is not None:
             # don't check
             dom_order.append(Path(custom))
 
         trace_pwd = kwargs.get('trace_pwd')
         if trace_pwd is True:
-            trace_pwd = Path('.').resolve()
+            trace_pwd = Path.cwd()
         if trace_pwd:
             inheritance = self.trace_ancestors(Path(trace_pwd))
             dom_order.extend(inheritance)
 
         locations = self.locations()
+
+        # xdg user locations
+        dom_order.extend(locations['user_loc'])
+
+        # deprecated locations
         if improper:
             dom_order.extend(locations['improper'])
 
-        for loc in ('user_loc', 'root_loc', 'shipped'):
-            dom_order.extend(locations[loc])
+        # read-only locations
+        dom_order.extend(locations['root_loc'])
+        dom_order.extend(locations['shipped'])
 
-        permargs = {
-            key: val
-            for key, val in kwargs.items()
-            if key in ('mode', 'dir_fs', 'effective_ids', 'follow_symlinks')
-        }
+        permargs = {key: val for key, val in kwargs.items() if key in PERMARGS}
         permargs = {**self.permargs, **permargs}
         dom_order = list(filter(lambda x: fs_perm(x, **permargs), dom_order))
         if dom_start:
             return dom_order
         return list(reversed(dom_order))
 
-    def safe_loc(self, **kwargs) -> List[Path]:
+    def safe_loc(self,
+                 custom: Path = None,
+                 dom_start: bool = True,
+                 **kwargs) -> List[Path]:
         """
         Locate safe writeable paths.
 
@@ -317,18 +343,18 @@ class FsDisc():
               - ``IsADirectoryError``
               - ``FileNotFoundError``
            - Improper locations (*~/.project*) are deliberately dropped
-           - Recommendation: set dom_start = ``False``
+           - Recommendation: set dom_start = ``False`` for global storage
 
         Args:
             ext: extension filter(s)
+            custom: custom location
+            dom_start: when ``False``, end with most dominant
             **kwargs:
-                - custom: custom location
                 - trace_pwd: when supplied, walk up to mountpoint or
                   project-root and inherit all locations that contain
-                  ``__init__.py``. Project-root is identified by discovery of
+                  ``__init__.py``. Project-root is identified by existence of
                   ``setup.py`` or ``setup.cfg``. Mountpoint is ``is_mount``
                   in unix or Drive in Windows. If ``True``, walk from ``$PWD``
-                - dom_start: when ``False``, end with most dominant
                 - permargs passed on to :py:meth:`xdgpspconf.utils.fs_perm`
 
 
@@ -345,5 +371,5 @@ class FsDisc():
 
         safe_paths = filter(
             lambda x: not any(private in str(x) for private in private_locs),
-            self.get_loc(**kwargs))
+            self.get_loc(custom=custom, dom_start=dom_start, **kwargs))
         return list(safe_paths)

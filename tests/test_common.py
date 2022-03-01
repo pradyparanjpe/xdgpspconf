@@ -59,6 +59,10 @@ class TestAccess(TestCase):
         """Read access"""
         self.assertTrue(fs_perm(self.access_file, 'r'))
 
+    def test_write(self):
+        """Write access to parent"""
+        self.assertTrue(fs_perm(self.access_file, 'w'))
+
     def test_exist(self):
         """Default mode: check existence (Tautology)"""
         self.assertTrue(fs_perm(self.access_file))
@@ -69,6 +73,5 @@ class TestAccess(TestCase):
 
     def test_setbit(self):
         """Unrecognised key"""
-        with self.assertRaisesRegex(KeyError,
-                                    r'mode: ([0-7]|r|w|x|rw|wx|rx|rwx|)'):
+        with self.assertRaisesRegex(KeyError, r's'):
             fs_perm(self.access_file, 's')

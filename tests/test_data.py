@@ -35,6 +35,7 @@ class TestData(TestCase):
         self.data_disc = FsDisc(project='test',
                                 base='data',
                                 shipped=Path(__file__))
+        print(self.data_disc)
 
     def tearDown(self):
         pass
