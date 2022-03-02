@@ -3,6 +3,7 @@ image: "python:3.7-alpine"
 stages:
 - build
 - test
+- docs
 - deploy
 
 build:
@@ -12,11 +13,9 @@ build:
   - python3 -m pip install -U -r requirements.txt
   script:
   - python3 -m pip install -U .
-  rules:
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  - if: $CI_COMMIT_BRANCH == 'develop'
-    allow_failure: true
-
+  only:
+    refs:
+    - testing
 
 pytest:
   stage: test
@@ -34,27 +33,36 @@ pytest:
     reports:
       junit: tests/report.xml
       cobertura: tests/coverage.xml
-  rules:
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  - if: $CI_COMMIT_BRANCH == 'develop'
-    allow_failure: true
-
+  only:
+    refs:
+    - testing
 
 pages:
-  stage: deploy
+  stage: docs
   before_script:
   - export PATH="${PATH}:${HOME}/.local/bin"
   - python3 -m pip install -U sphinx
   - python3 -m pip install -r docs/requirements.txt
   - python3 -m pip install -U -r requirements.txt
   - python3 -m pip install -U .
-  - mkdir -p .public
+  - mkdir -p public
   script:
-  - sphinx-build -b html docs .public
-  after_script:
-  - mv .public public
+  - sphinx-build -b html docs public
   artifacts:
     paths:
     - public
-  rules:
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  only:
+    refs:
+    - $CI_DEFAULT_BRANCH
+
+pypi:
+  stage: deploy
+  before_script:
+  - export PATH="${PATH}:${HOME}/.local/bin"
+  - python3 -m pip install -U build setuptools wheel twine
+  - python3 -m build
+  script:
+  - python -m twine upload --skip-existing dist/*
+  only:
+    refs:
+    - release

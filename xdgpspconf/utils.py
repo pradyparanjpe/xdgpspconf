@@ -83,7 +83,7 @@ def fs_perm(path: Path, mode: Union[str, int] = 0, **permargs):
         path = path.parent
     try:
         return os.access(path, **permargs)
-    except NotImplementedError:
+    except NotImplementedError:  # pragma: no cover
         for not_impl_kw in 'dir_fd', 'follow_symlinks', 'effective_ids':
             del permargs[not_impl_kw]
         return os.access(path, **permargs)
