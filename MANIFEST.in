@@ -1,9 +1,16 @@
-include *.txt
 include *.rst
+include *.txt
+include LICENSE
+recursive-include docs *.bat
+recursive-include docs *.py
+recursive-include docs *.rst
+recursive-include docs *.svg
+recursive-include docs *.txt
+recursive-include docs Makefile
+recursive-include tests *.coveragerc
+recursive-include tests *.testrc
 recursive-include xdgpspconf *.yml
-recursive-include tests *
-recursive-exclude tests .coverage
-recursive-exclude tests .pytest_cache/**
-recursive-include docs *
-recursive-exclude docs _*/**
-recursive-exclude build *.pyc
+recursive-exclude docs _build/**
+recursive-exclude tests __pycache__/**
+recursive-exclude tests htmlcov/*
+recursive-exclude tests *.xml
