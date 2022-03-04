@@ -2,6 +2,7 @@ stages:
 - build
 - test
 - docs
+- prepare_release
 - release
 
 build:
@@ -68,52 +69,49 @@ pypi:
   - python setup.py sdist bdist_wheel
   script:
   - >
-      TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token
       python -m twine upload
-      --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+      --repository gitlab
       --skip-existing --non-interactive
       dist/*
   only:
     refs:
     - release
 
-# prepare_job:
-#   stage: prepare  # This stage must run before the release stage
-#   rules:
-#   - if: $CI_COMMIT_TAG
-#     when: never  # Do not run this job when a tag is created manually
-#   script:
-#   - echo "EXTRA_DESCRIPTION=some message" >> variables.env  # Generate the EXTRA_DESCRIPTION and TAG environment variables
-#   - echo "TAG=v$(cat VERSION)" >> variables.env  # and append to the variables.env file
-#   artifacts:
-#     reports:
-#       dotenv: variables.env  # Use artifacts:reports:dotenv to expose the variables to other jobs
-#   only:
-#     refs:
-#     - release
+prepare_job:
+  stage: prepare_release
+  script:
+  - >
+      echo
+      "TAG=v$(grep '__version__' xdgpspconf/__init__.py
+      | cut -d\' -f2
+      | cut -d\" -f2)"
+      >> variables.env
+  artifacts:
+    reports:
+      dotenv: variables.env
+  only:
+    refs:
+    - release
 
-# release_job:
-#   stage: release
-#   image: registry.gitlab.com/gitlab-org/release-cli:latest
-#   needs:
-#   - job: prepare_job
-#     artifacts: true
-#   rules:
-#   - if: $CI_COMMIT_TAG
-#     when: never  # Do not run this job when a tag is created manually
-#   script:
-#   - echo "running release_job for $TAG"
-#   release:
-#     name: 'Release $TAG'
-#     description: 'Created using the release-cli $EXTRA_DESCRIPTION'  # $EXTRA_DESCRIPTION and the $TAG
-#     tag_name: '$TAG'                                                 # variables must be defined elsewhere
-#     ref: '$CI_COMMIT_SHA'                                            # in the pipeline. For example, in the
-#     assets:
-#       links:
-#       - name: 'Gitlab pip repository'
-#         url: ''
-#       - name: 'pip pypi repository'
-#         url: 'https://https://pypi.org/project/xdgpspconf/'
-#   only:
-#     refs:
-#     - release
+release_job:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+  - job: prepare_job
+    artifacts: true
+  script:
+  - echo "running release_job for $TAG"
+  release:
+    name: 'Release $TAG'
+    description: './CHANGELOG.md'
+    tag_name: '$TAG'
+    ref: '$CI_COMMIT_SHA'
+    assets:
+      links:
+      - name: 'Gitlab pip repository'
+        url: '${CI_PROJECT_URL}'
+      - name: 'pip pypi repository'
+        url: 'https://https://pypi.org/project/${CI_PROJECT_NAME}/'
+  only:
+    refs:
+    - release
