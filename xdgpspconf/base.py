@@ -39,6 +39,7 @@ Most to least- dominant (least to most global) order
 
 import os
 import sys
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -126,9 +127,15 @@ def extract_xdg():
 XDG = extract_xdg()
 
 
-class FsDisc():
+class BaseDisc():
     """
-    File-System DISCovery functions
+    File-System basic DISCovery functions.
+
+    See also:
+        - :class:`xdgpspconf.base.CacheDisc`
+        - :class:`xdgpspconf.base.DataDisc`
+        - :class:`xdgpspconf.base.StateDisc`
+        - :class:`xdgpspconf.config.ConfDisc`
 
     Args:
         project: str: project under consideration
@@ -373,3 +380,95 @@ class FsDisc():
             lambda x: not any(private in str(x) for private in private_locs),
             self.get_loc(custom=custom, dom_start=dom_start, **kwargs))
         return list(safe_paths)
+
+
+class FsDisc(BaseDisc):
+    """
+    Warning:
+        - Deprecated, will be removed in 0.3.0
+        - Use :class:`xdgpspconf.base.BaseDisc` instead.
+
+    See also:
+        - :class:`xdgpspconf.base.CacheDisc`
+        - :class:`xdgpspconf.base.DataDisc`
+        - :class:`xdgpspconf.base.StateDisc`
+        - :class:`xdgpspconf.config.ConfDisc`
+    """
+
+    def __init__(self,
+                 project: str,
+                 base: str = 'data',
+                 shipped: Union[Path, str] = None,
+                 **permargs):
+        warnings.warn('FsDisc is deprecated, use BaseDisc.',
+                      DeprecationWarning)
+        super().__init__(project=project,
+                         base=base,
+                         shipped=shipped,
+                         **permargs)
+
+
+class CacheDisc(BaseDisc):
+    """
+    Cache Storage discovery functions
+
+    Use for cached data. (may be lost)
+
+    See also:
+        - :class:`xdgpspconf.base.DataDisc`
+        - :class:`xdgpspconf.base.StateDisc`
+        - :class:`xdgpspconf.config.ConfDisc`
+    """
+
+    def __init__(self,
+                 project: str,
+                 shipped: Union[Path, str] = None,
+                 **permargs):
+        super().__init__(project=project,
+                         base='cache',
+                         shipped=shipped,
+                         **permargs)
+
+
+class DataDisc(BaseDisc):
+    """
+    Data Storage discovery functions.
+
+    Use for static data.
+
+    See also:
+        - :class:`xdgpspconf.base.CacheDisc`
+        - :class:`xdgpspconf.base.StateDisc`
+        - :class:`xdgpspconf.config.ConfDisc`
+    """
+
+    def __init__(self,
+                 project: str,
+                 shipped: Union[Path, str] = None,
+                 **permargs):
+        super().__init__(project=project,
+                         base='data',
+                         shipped=shipped,
+                         **permargs)
+
+
+class StateDisc(BaseDisc):
+    """
+    State Storage discovery functions
+
+    Use for state data: logs, history.
+
+    See also:
+        - :class:`xdgpspconf.base.CacheDisc`
+        - :class:`xdgpspconf.base.DataDisc`
+        - :class:`xdgpspconf.config.ConfDisc`
+    """
+
+    def __init__(self,
+                 project: str,
+                 shipped: Union[Path, str] = None,
+                 **permargs):
+        super().__init__(project=project,
+                         base='state',
+                         shipped=shipped,
+                         **permargs)

@@ -25,16 +25,14 @@ import sys
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf import FsDisc
+from xdgpspconf import CacheDisc, DataDisc, FsDisc, StateDisc
 from xdgpspconf.base import XdgVar
 
 
 class TestData(TestCase):
 
     def setUp(self):
-        self.data_disc = FsDisc(project='test',
-                                base='data',
-                                shipped=Path(__file__))
+        self.data_disc = DataDisc(project='test', shipped=Path(__file__))
         print(self.data_disc)
 
     def tearDown(self):
@@ -112,13 +110,13 @@ class TestBase(TestCase):
         pass
 
     def test_cache(self):
-        FsDisc('test', base='cache', shipped=Path(__file__))
+        CacheDisc('test', shipped=Path(__file__))
 
     def test_state(self):
-        FsDisc('test', 'state', shipped=Path(__file__))
+        StateDisc('test', shipped=Path(__file__))
 
     def test_setter_Xdg(self):
-        disc = FsDisc('test', 'state', shipped=Path(__file__))
+        disc = StateDisc('test', shipped=Path(__file__))
         _xdg = disc.xdg
         disc.xdg = _xdg
 
@@ -130,3 +128,10 @@ class TestErrors(TestCase):
         with self.assertRaisesRegex(KeyError, 'is not a recognised key'):
             test_var = XdgVar(var='data')
             test_var.update({'my_data': 'some_data'})
+
+
+class TestDeprecated(TestCase):
+
+    def test_fsdisc_deprecated(self):
+        with self.assertWarnsRegex(DeprecationWarning, 'FsDisc'):
+            FsDisc(project='test')

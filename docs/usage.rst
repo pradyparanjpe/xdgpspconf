@@ -99,7 +99,7 @@ Access data folders.
       :caption: readable_data_loc.py
 
       from pathlib import Path
-      from xdgpspconf import FsDisc
+      from xdgpspconf import DataDisc
 
 
       _NAME = Path(__file__).parent.name
@@ -111,7 +111,7 @@ Access data folders.
 
           allow discouraged ~/. locations
           """
-          discoverer = FsDisc(project=_NAME, base='data', mode='r')
+          discoverer = DataDisc(project=_NAME, mode='r')
           discoverer.get_loc(improper=True)
           print('Readable data locations:')
           for loc in data_loc:
@@ -123,7 +123,7 @@ Access data folders.
       :caption: writable_data.py
 
       from pathlib import Path
-      from xdgpspconf import FsDisc
+      from xdgpspconf import DataDisc
 
 
       _NAME = Path(__file__).parent.name
@@ -133,7 +133,7 @@ Access data folders.
           """
           Locate writable standard data locations
           """
-          discoverer = FsDisc(project=_NAME, base='data', mode='w')
+          discoverer = DataDisc(project=_NAME, mode='w')
           data_loc = discoverer.get_loc()
           print('Writable data locations:')
           for loc in data_loc:
@@ -145,4 +145,8 @@ Access data folders.
       - cache
       - state
 
-   - Other bases may be declared in ``~/.config/xdgpspconf/xdg.yml``
+
+Other bases may be declared in ``~/.config/xdgpspconf/xdg.yml``
+similar to ``<xdgpspconf>/xdg.yml``, where `<xdgpspconf>`
+is the installation location of `xdgpspconf`: typically located at
+``${HOME}/.local/lib/python<major>.<minor>/site-packages/xdgpspconf``.

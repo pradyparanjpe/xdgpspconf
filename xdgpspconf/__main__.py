@@ -23,7 +23,7 @@ Command-line Callable.
 module executable script: python3 -m xdgpspconf
 """
 
-from xdgpspconf import ConfDisc, FsDisc
+from xdgpspconf import ConfDisc, BaseDisc
 from xdgpspconf.command_line import cli
 
 
@@ -37,7 +37,7 @@ def main():
     """
     cli_args = cli()
     if cli_args['base'] != 'config':
-        discoverer = FsDisc(project=cli_args['project'],
+        discoverer = BaseDisc(project=cli_args['project'],
                             base=cli_args['base'],
                             shipped=cli_args['shipped'],
                             mode=cli_args['mode'])

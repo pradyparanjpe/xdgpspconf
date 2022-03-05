@@ -42,7 +42,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from xdgpspconf.base import FsDisc
+from xdgpspconf.base import BaseDisc
 from xdgpspconf.config_io import parse_rc, write_rc
 from xdgpspconf.utils import PERMARGS, fs_perm
 
@@ -50,11 +50,11 @@ CONF_EXT = '.yml', '.yaml', '.toml', '.conf', '.ini'
 """Extensions that are supported (parsed) by this module"""
 
 
-class ConfDisc(FsDisc):
+class ConfDisc(BaseDisc):
     """
     CONF DISCoverer
 
-    Each location is config file, NOT directory as with FsDisc
+    Each location is config file, NOT directory as with BaseDisc
     """
 
     def __init__(self,

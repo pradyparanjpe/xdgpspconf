@@ -57,16 +57,16 @@ pages:
     - public
   only:
     refs:
-    - $CI_DEFAULT_BRANCH
+    - release
 
 pypi:
   image: "python:3.7"
   stage: release
   before_script:
   - export PATH="${PATH}:${HOME}/.local/bin"
-  - python3 -m pip install -U setuptools twine
+  - python3 -m pip install -U setuptools twine build
   - rm -rf build dist
-  - python setup.py sdist bdist_wheel
+  - python -m build
   script:
   - >
       python -m twine upload
