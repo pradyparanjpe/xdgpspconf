@@ -25,7 +25,7 @@ Common filesystem discovery functions.
 import os
 from functools import reduce
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 PERMARGS: Dict[str, Any] = {
     'mode': 0,
@@ -106,3 +106,46 @@ def is_mount(path: Path) -> bool:
         if path.resolve().drive + '\\' == str(path):
             return True
         return False
+
+
+def serial_secure_seq(unsafe_seq: Sequence):
+    """Resolve Sequence and stringify complex data types for safe dumping"""
+    safe_list: List[Optional[Union[bool, int, float, str, Tuple, Dict]]] = []
+    for item in unsafe_seq:
+        if isinstance(item, (bool, str, int, float)) or item is None:
+            safe_list.append(item)
+        elif isinstance(item, Sequence):
+            safe_list.append(serial_secure_seq(item))
+        elif isinstance(item, Mapping):
+            safe_list.append(serial_secure_map(item))
+        else:
+            safe_list.append(str(item))
+    return tuple(safe_list)
+
+
+def serial_secure_map(
+    unsafe_map: Mapping
+) -> Dict[Optional[Union[bool, int, float, str, Tuple, Dict]],
+          Tuple[Optional[Union[bool, int, float, str, Tuple, Dict]]]]:
+    """Resolve Mapping and stringify complex data types for safe dumping"""
+    safe_map = {}
+    for key, value in unsafe_map.items():
+
+        # stringify key
+        if isinstance(key, (bool, int, float, str)) or key is None:
+            safe_key = key
+        elif isinstance(key, Sequence):
+            safe_key = serial_secure_seq(key)
+        else:
+            safe_key = str(key)
+
+        # value
+        if isinstance(value, (bool, int, float, str)) or value is None:
+            safe_map[safe_key] = value
+        elif isinstance(value, Sequence):
+            safe_map[safe_key] = serial_secure_seq(value)
+        elif isinstance(value, Mapping):
+            safe_map[safe_key] = serial_secure_map(value)
+        else:
+            safe_map[safe_key] = str(value)
+    return safe_map

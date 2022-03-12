@@ -24,13 +24,15 @@ XDG Platform Suited Project CONFiguration.
 
 """
 
+from xdgpspconf import utils
 from xdgpspconf.base import BaseDisc, CacheDisc, DataDisc, FsDisc, StateDisc
 from xdgpspconf.config import ConfDisc
 
 __author__ = 'Pradyumna Paranjape'
 __copyright_years__ = '2021-2022'
-__version__ = '0!0.2.0'
+__version__ = '0!0.2.1'
 
 __all__ = [
-    'ConfDisc', 'BaseDisc', 'CacheDisc', 'DataDisc', 'FsDisc', 'StateDisc'
+    'ConfDisc', 'BaseDisc', 'CacheDisc', 'DataDisc', 'FsDisc', 'StateDisc',
+    'utils'
 ]

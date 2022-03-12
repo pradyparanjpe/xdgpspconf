@@ -21,12 +21,11 @@
 Test config locations
 """
 
-import os
 from pathlib import Path
 from unittest import TestCase
 
 from xdgpspconf.base import is_mount
-from xdgpspconf.utils import fs_perm
+from xdgpspconf.utils import fs_perm, serial_secure_map, serial_secure_seq
 
 
 class TestMount(TestCase):
@@ -75,3 +74,36 @@ class TestAccess(TestCase):
         """Unrecognised key"""
         with self.assertRaisesRegex(KeyError, r's'):
             fs_perm(self.access_file, 's')
+
+
+class TestSerial(TestCase):
+
+    def setUp(self):
+        self.posix_path = Path.cwd()
+        self.posix_str = str(self.posix_path)
+
+    def test_seq(self):
+        safe_list = serial_secure_seq([[self.posix_str, self.posix_path],
+                                       (self.posix_str, self.posix_path), {
+                                           self.posix_str: self.posix_path
+                                       }])
+        self.assertEqual(safe_list[0][0], safe_list[0][1])
+        self.assertEqual(safe_list[1][0], safe_list[1][1])
+        for key, val in safe_list[2].items():
+            self.assertEqual(key, val)
+
+    def test_map(self):
+        safe_dict = serial_secure_map({
+            ('path', self.posix_path): (self.posix_path, ),
+            'path': [self.posix_path],
+            self.posix_path: {
+                'str': self.posix_str
+            },
+        })
+        keys = list(safe_dict.keys())
+        values = list(safe_dict.values())
+        print(keys)
+        print(values)
+        self.assertEqual(keys[0][1], values[0][0])
+        self.assertEqual(values[1][0], self.posix_str)
+        self.assertEqual(list(values[2].values())[0], self.posix_str)

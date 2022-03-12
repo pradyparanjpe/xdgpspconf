@@ -157,7 +157,7 @@ def write_yaml(data: Dict[str, Any],
     data = {**old_data, **data}
     config.parent.mkdir(parents=True, exist_ok=True)
     with open(config, 'w') as rcfile:
-        yaml.dump(data, rcfile)
+        yaml.safe_dump(data, rcfile)
     return True
 
 
@@ -224,9 +224,13 @@ def write_rc(data: Dict[str, Any], config: Path, force: str = 'fail') -> bool:
     Write data to configuration file.
 
     Args:
-        data: serial data to save
+        data: serial data: user to confirm serialization safety
         config: configuration file path
         force: force overwrite {'overwrite', 'update', 'fail'}
+
+    See also:
+        :meth:`xdgpspconf.utils.serial_secure_seq`
+        :meth:`xdgpspconf.utils.serial_secure_map`
 
     Returns:
         write success
