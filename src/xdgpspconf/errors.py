@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021, 2022 Pradyumna Paranjape
+# Copyright © 2021-2023 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -17,22 +17,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-XDG Platform Suited Project CONFiguration.
+"""xdgpspconf's defined errors."""
 
-- Read project configurationn from standard locations
+from pathlib import Path
 
-"""
 
-from xdgpspconf import utils
-from xdgpspconf.base import BaseDisc, CacheDisc, DataDisc, FsDisc, StateDisc
-from xdgpspconf.config import ConfDisc
+class XdgpspConfError(Exception):
+    """Base error for XdgpspConf(Exception)."""
 
-__author__ = 'Pradyumna Paranjape'
-__copyright_years__ = '2021-2022'
-__version__ = '0!0.2.1'
 
-__all__ = [
-    'ConfDisc', 'BaseDisc', 'CacheDisc', 'DataDisc', 'FsDisc', 'StateDisc',
-    'utils'
-]
+class BadConf(XdgpspConfError):
+    """Bad configuration format."""
+
+    def __init__(self, config_file: Path, *args):
+        super().__init__(f'Bad configuration in {config_file}\n', *args)

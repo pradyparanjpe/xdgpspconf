@@ -16,56 +16,62 @@ Preferred method
 Install
 --------
 
-.. tabbed:: pip
+.. tabs::
 
-   .. code-block:: sh
-      :caption: install
+    .. tab:: pip
 
-      pip install xdgpspconf
+       .. code-block:: sh
+          :caption: install
+
+          pip install xdgpspconf
 
 
-.. tabbed:: module import
+    .. tab:: module import
 
-   .. code-block:: sh
-      :caption: if ``command not found: pip``
+       .. code-block:: sh
+          :caption: if ``command not found: pip``
 
-      python3 -m pip install xdgpspconf
+          python3 -m pip install xdgpspconf
 
 
 Update
 -------
 
-.. tabbed:: pip
+.. tabs:: 
 
-   .. code-block:: sh
-      :caption: install
+    .. tab:: pip
 
-      pip install -U xdgpspconf
+       .. code-block:: sh
+          :caption: install
+
+          pip install -U xdgpspconf
 
 
-.. tabbed:: module import
+    .. tab:: module import
 
-   .. code-block:: sh
-      :caption: if ``command not found: pip``
+       .. code-block:: sh
+          :caption: if ``command not found: pip``
 
-      python3 -m pip install -U xdgpspconf
+          python3 -m pip install -U xdgpspconf
 
 
 Uninstall
 ----------
 
-.. tabbed:: pip
+.. tabs::
 
-   .. code-block:: sh
-      :caption: uninstall
+    .. tab:: pip
 
-      pip uninstall xdgpspconf
+       .. code-block:: sh
+          :caption: uninstall
+
+          pip uninstall xdgpspconf
 
 
-.. tabbed:: module import
+    .. tab:: module import
 
-   .. code-block:: sh
-      :caption: if ``command not found: pip``
+       .. code-block:: sh
+          :caption: if ``command not found: pip``
 
-      python3 -m pip uninstall xdgpspconf
+          python3 -m pip uninstall xdgpspconf
 

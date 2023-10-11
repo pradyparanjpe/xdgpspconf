@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021, 2022 Pradyumna Paranjape
+# Copyright © 2021-2023 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -17,19 +17,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Command-line Callable.
+"""Command-line Callable.
 
-module executable script: python3 -m xdgpspconf
+module executable script: python -m xdgpspconf
 """
 
-from xdgpspconf import ConfDisc, BaseDisc
+from xdgpspconf import BaseDisc, ConfDisc
 from xdgpspconf.command_line import cli
 
 
 def main():
     """
-    Execute.
+    Entry Point executable.
 
     This executable is meant for useless testing.
     The main utility of this module is to use configurations
@@ -38,9 +37,9 @@ def main():
     cli_args = cli()
     if cli_args['base'] != 'config':
         discoverer = BaseDisc(project=cli_args['project'],
-                            base=cli_args['base'],
-                            shipped=cli_args['shipped'],
-                            mode=cli_args['mode'])
+                              base=cli_args['base'],
+                              shipped=cli_args['shipped'],
+                              mode=cli_args['mode'])
         for path in discoverer.get_loc(
                 custom=cli_args.get('custom', None),
                 trace_pwd=cli_args.get('trace_pwd', False),

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021, 2022 Pradyumna Paranjape
+# Copyright © 2021-2023 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -17,42 +17,48 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Common filesystem discovery functions.
-
-"""
+"""Common filesystem discovery functions."""
 
 import os
 from functools import reduce
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Sequence
 
-PERMARGS: Dict[str, Any] = {
+SAFE_TYPE = bool | float | int | str | tuple['SAFE_TYPE',
+                                             ...] | dict['SAFE_TYPE',
+                                                         'SAFE_TYPE'] | None
+
+PERMARGS: dict[str, Any] = {
     'mode': 0,
     'dir_fd': None,
     'effective_ids': True,
     'follow_symlinks': True
 }
-"""Keys accepted by :py:meth:`os.access`"""
+"""Keys accepted by :meth:`os.access`"""
 
 
-def fs_perm(path: Path, mode: Union[str, int] = 0, **permargs):
+def fs_perm(path: Path, mode: str | int = 0, **permargs):
     """
     Check rwx- permissions to the latest existing parent for effective id.
 
-    Args:
-        path: check permissions of this location or latest existing ancestor.
-        mode: permissions to check {[0-7],-,x,w,wx,r,rx,rw,rwx}
-        **permargs:
+    Defaults
+    --------
+    :data:`xdgpspconf.utils.PERMARGS`
 
-            All are passed to :py:meth:`os.access`
+    Parameters
+    ----------
+    path : Path
+        check permissions of this location or latest existing ancestor.
+    mode : str | int
+        permissions to check {[0-7],-,x,w,wx,r,rx,rw,rwx}
+    **permargs : dict[str, Any]
+        All are passed to :meth:`os.access`
 
-            Defaults:
-
-                :py:data:`xdgpspconf.utils.PERMARGS`
-
-    Returns:
+    Returns
+    -------
+    bool
         ``True`` only if permissions are available
+
     """
     # convert mode to octal
     # os returns the same ints, yet, we allow os to have changed
@@ -93,8 +99,15 @@ def is_mount(path: Path) -> bool:
     """
     Check across platform if path is mount-point (unix) or drive (win).
 
-    Args:
-        path: path to be checked
+    Parameters
+    ----------
+    path : Path
+        path to be checked
+
+    Returns
+    -------
+    bool
+        path is a mountpoint
     """
     # assume POSIX
     try:
@@ -108,9 +121,9 @@ def is_mount(path: Path) -> bool:
         return False
 
 
-def serial_secure_seq(unsafe_seq: Sequence):
-    """Resolve Sequence and stringify complex data types for safe dumping"""
-    safe_list: List[Optional[Union[bool, int, float, str, Tuple, Dict]]] = []
+def serial_secure_seq(unsafe_seq: Sequence) -> tuple[SAFE_TYPE, ...]:
+    """Resolve Sequence and stringify complex data types for safe dumping."""
+    safe_list: list[SAFE_TYPE] = []
     for item in unsafe_seq:
         if isinstance(item, (bool, str, int, float)) or item is None:
             safe_list.append(item)
@@ -123,17 +136,14 @@ def serial_secure_seq(unsafe_seq: Sequence):
     return tuple(safe_list)
 
 
-def serial_secure_map(
-    unsafe_map: Mapping
-) -> Dict[Optional[Union[bool, int, float, str, Tuple, Dict]],
-          Tuple[Optional[Union[bool, int, float, str, Tuple, Dict]]]]:
-    """Resolve Mapping and stringify complex data types for safe dumping"""
-    safe_map = {}
+def serial_secure_map(unsafe_map: Mapping) -> dict[SAFE_TYPE, SAFE_TYPE]:
+    """Resolve Mapping and stringify complex data types for safe dumping."""
+    safe_map: dict[SAFE_TYPE, SAFE_TYPE] = {}
     for key, value in unsafe_map.items():
 
         # stringify key
         if isinstance(key, (bool, int, float, str)) or key is None:
-            safe_key = key
+            safe_key: SAFE_TYPE = key
         elif isinstance(key, Sequence):
             safe_key = serial_secure_seq(key)
         else:

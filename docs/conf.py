@@ -15,11 +15,11 @@ import sys
 
 import sphinx_rtd_theme
 
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('..src'))
 
 # -- Project information -----------------------------------------------------
 
-from xdgpspconf import __author__, __copyright_years__, __version__
+from xdgpspconf.__about__ import __author__, __copyright_years__, __version__
 
 project = 'xdgpspconf'
 author = __author__
@@ -36,7 +36,7 @@ release = __version__
 extensions = [
     'sphinx.ext.todo', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode',
     'sphinx.ext.napoleon', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints',
-    'sphinxarg.ext', 'sphinx_panels'
+    'sphinxarg.ext', 'sphinx_tabs.tabs'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

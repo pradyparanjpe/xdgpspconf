@@ -17,15 +17,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Test data locations
-"""
+"""Test data locations."""
 import os
 import sys
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf import CacheDisc, DataDisc, FsDisc, StateDisc
+from xdgpspconf import CacheDisc, DataDisc, StateDisc
 from xdgpspconf.base import XdgVar
 
 
@@ -73,7 +71,7 @@ class TestData(TestCase):
             home = Path.home()
             xdgconfig = Path(
                 os.environ.get('APPDATA', home / '.local/share/test'))
-        self.assertIn(xdgconfig, self.data_disc.user_xdg_loc())
+        self.assertIn(xdgconfig, self.data_disc.user_xdg_loc)
 
     def test_custom(self):
         self.assertIn(
@@ -128,10 +126,3 @@ class TestErrors(TestCase):
         with self.assertRaisesRegex(KeyError, 'is not a recognised key'):
             test_var = XdgVar(var='data')
             test_var.update({'my_data': 'some_data'})
-
-
-class TestDeprecated(TestCase):
-
-    def test_fsdisc_deprecated(self):
-        with self.assertWarnsRegex(DeprecationWarning, 'FsDisc'):
-            FsDisc(project='test')

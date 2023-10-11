@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8; mode: python; -*-
-# Copyright © 2021, 2022 Pradyumna Paranjape
+# Copyright © 2021-2023 Pradyumna Paranjape
 #
 # This file is part of xdgpspconf.
 #
@@ -17,22 +17,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Command line inputs
-"""
+"""Command line inputs."""
 import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from pathlib import Path
 
 from argcomplete import autocomplete
 
-from xdgpspconf import __version__
+from xdgpspconf.__about__ import __version__
 
 
 def _cli() -> ArgumentParser:
-    """
-    Parser for autodoc
-    """
+    """Parser for autodoc."""
     parser = ArgumentParser(prog='xdgpspconf',
                             formatter_class=RawDescriptionHelpFormatter)
     # python bash/zsh completion
@@ -73,7 +69,7 @@ def _cli() -> ArgumentParser:
     parser.add_argument(
         '--version',
         action='version',
-        version=f'%(prog)s ' + ' '.join(
+        version='%(prog)s ' + ' '.join(
             (__version__, 'form', str(Path(__file__).resolve().parent),
              f'(python {sys.version_info.major}.{sys.version_info.minor})')))
     autocomplete(parser)
@@ -82,7 +78,12 @@ def _cli() -> ArgumentParser:
 
 def cli() -> dict:
     """
-    Command line arguments
+    Command line arguments.
+
+    Returns
+    -------
+    dict
+        Command line arguments in dict form.
     """
     parser = _cli()
     return vars(parser.parse_args())
