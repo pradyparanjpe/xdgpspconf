@@ -38,6 +38,11 @@ class TestConfig(TestCase):
             self.conf_disc.get_conf(dom_start=False)[0],
             self.conf_disc.get_conf()[-1])
 
+    def test_cname(self):
+        self.assertEqual(
+            self.conf_disc.get_conf(dom_start=False, cname='style')[0],
+            self.conf_disc.get_conf(cname='style')[-1])
+
     def test_conf(self):
         self.assertIn(
             Path('./.testrc').resolve(),
@@ -99,6 +104,10 @@ class TestWrite(TestCase):
 
     def setUp(self):
         self.conf_disc = ConfDisc('test', mode='w', shipped=__file__)
+        self.data = list(
+            self.conf_disc.read_config(flatten=True,
+                                       dom_start=True,
+                                       trace_pwd=True).values())[0]
         print(self.conf_disc)
 
     def tearDown(self):
@@ -106,29 +115,25 @@ class TestWrite(TestCase):
 
     def test_write(self):
         # permission error
-        for ext in '.yml', '.toml', '.conf', None:
-            conf_file = self.conf_disc.write_config({},
+        for ext in '.yml', '.json', '.toml', '.conf', None:
+            print(ext)
+            conf_file = self.conf_disc.write_config(self.data,
                                                     'update',
                                                     dom_start=True,
                                                     trace_pwd=True,
                                                     ext=ext)
-            self.assertIsNotNone(conf_file)
-            assert conf_file is not None
-            try:
-                # NEXT 3.8: missing_ok=``True``
-                conf_file.unlink()
-            except FileNotFoundError:
-                pass
+            retrieved = list(
+                self.conf_disc.read_config(flatten=True,
+                                           trace_pwd=True,
+                                           ext=ext).values())[0]
+            print(self.data)
+            print(retrieved)
+            self.assertEqual(self.data, retrieved)
+            conf_file.unlink(missing_ok=True)
 
         self.conf_disc.shipped = None
         conf_file = self.conf_disc.write_config({},
                                                 'update',
                                                 dom_start=False,
                                                 custom=Path.cwd())
-        self.assertIsNotNone(conf_file)
-        assert conf_file is not None
-        try:
-            # NEXT 3.8: missing_ok=``True``
-            conf_file.unlink()
-        except FileNotFoundError:
-            pass
+        conf_file.unlink(missing_ok=True)

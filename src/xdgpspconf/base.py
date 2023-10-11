@@ -17,20 +17,20 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
+r"""
 Base to discover paths.
 
 \*\*kwargs
 ----------
 Following kwargs are defined for some functions as indicated.
 
-trace_pwd : Path | os.PathLike
+trace_pwd : Union[Path, os.PathLike]
     When supplied, walk up to mountpoint or project-root and inherit all
     locations that contain ``__init__.py``. Project-root is identified by
     existence of ``setup.py`` or ``setup.cfg``. Mountpoint returns ``True`` for
     :meth:`Path.is_mount` in unix or is Drive in Windows. If ``True``, walk
     from ``$PWD``.
-\*\*kwargs : dict[str, Any]
+\*\*kwargs : Dict[str, Any]
     remaining kwargs of :py:meth:`xdgpspconf.utils.fs_perm`: passed on
 
 Order
@@ -50,7 +50,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 
@@ -64,22 +64,22 @@ class XdgVar():
     var: str = ''
     """XDG variable name"""
 
-    dirs: str | None = None
+    dirs: Optional[str] = None
     """XDG variable list"""
 
-    root: list[str] = field(default_factory=list)
+    root: List[str] = field(default_factory=list)
     """root locations"""
 
-    default: list[str] = field(default_factory=list)
+    default: List[str] = field(default_factory=list)
     """default location"""
 
-    def update(self, master: dict[str, Any]):
+    def update(self, master: Dict[str, Any]):
         """
         Update values.
 
         Parameters
         ----------
-        master : dict[str, Any]
+        master : Dict[str, Any]
             update with these values
 
         """
@@ -142,7 +142,7 @@ def extract_xdg():
         except (FileNotFoundError, IsADirectoryError, PermissionError):
             pass
 
-    xdg: dict[str, PlfmXdg] = {}
+    xdg: Dict[str, PlfmXdg] = {}
     for var_type, var_info in xdg_info.items():
         win_xdg = XdgVar()
         posix_xdg = XdgVar()
@@ -157,7 +157,7 @@ XDG = extract_xdg()
 
 
 class BaseDisc():
-    """
+    r"""
     File-System basic DISCovery functions.
 
     See Also
@@ -174,7 +174,7 @@ class BaseDisc():
         xdg base to fetch {CACHE,CONFIG,DATA,STATE}
     shipped : Path
         ``namespace.__file__``
-    **permargs : dict[str, Any]
+    \*\*permargs : Dict[str, Any]
         all (arguments to :meth:`os.access`) are passed to
         :meth:`xdgpspconf.utils.fs_perm`
 
@@ -183,7 +183,7 @@ class BaseDisc():
     def __init__(self,
                  project: str,
                  base: str = 'data',
-                 shipped: Path | str | None = None,
+                 shipped: Optional[Union[Path, os.PathLike]] = None,
                  **permargs):
         self.project = project
         """project under consideration"""
@@ -196,13 +196,13 @@ class BaseDisc():
 
         self._xdg: PlfmXdg = XDG[base]
 
-        self._user_xdg_loc: list[Path] | None = None
+        self._user_xdg_loc: Optional[List[Path]] = None
 
-        self._improper_loc: list[Path] | None = None
+        self._improper_loc: Optional[List[Path]] = None
 
-        self._root_xdg_loc: list[Path] | None = None
+        self._root_xdg_loc: Optional[List[Path]] = None
 
-        self._locations: list[Path] | None = None
+        self._locations: Optional[List[Path]] = None
 
     @property
     def xdg(self) -> PlfmXdg:
@@ -218,7 +218,7 @@ class BaseDisc():
         self._xdg = value
 
     @property
-    def user_xdg_loc(self) -> list[Path]:
+    def user_xdg_loc(self) -> List[Path]:
         """XDG_<BASE>_HOME locations. First directory is most dominant."""
         if self._user_xdg_loc is None:
             user_home = Path.home()
@@ -248,7 +248,7 @@ class BaseDisc():
         return self._user_xdg_loc
 
     @property
-    def improper_loc(self) -> list[Path]:
+    def improper_loc(self) -> List[Path]:
         """
         Discouraged improper data locations such as *~/.project*.
 
@@ -267,9 +267,9 @@ class BaseDisc():
         return self._improper_loc
 
     @property
-    def root_xdg_loc(self) -> list[Path]:
+    def root_xdg_loc(self) -> List[Path]:
         """
-        Get ROOT's counterparts of XDG_<BASE>_HOME locations. 
+        Get ROOT's counterparts of XDG_<BASE>_HOME locations.
 
         First directory is most dominant.
         """
@@ -286,7 +286,7 @@ class BaseDisc():
         return self._root_xdg_loc
 
     @property
-    def locations(self) -> dict[str, list[Path]]:
+    def locations(self) -> Dict[str, List[Path]]:
         """
         Named dictionary containing respective list of Paths.
 
@@ -306,7 +306,7 @@ class BaseDisc():
             r_out.append(f'{attr}: {getattr(self, attr)}')
         return '\n'.join(r_out)
 
-    def trace_ancestors(self, child_dir: Path) -> list[Path]:
+    def trace_ancestors(self, child_dir: Path) -> List[Path]:
         """
         Walk up to nearest mountpoint or project root.
 
@@ -327,7 +327,7 @@ class BaseDisc():
         List[Path]
             Paths to ancestors: First directory is most dominant
         """
-        pedigree: list[Path] = []
+        pedigree: List[Path] = []
 
         # I **AM** my 0th ancestor
         while not is_mount(child_dir):
@@ -342,37 +342,37 @@ class BaseDisc():
         return pedigree
 
     def get_loc(self,
-                custom: Path | None = None,
+                custom: Optional[Path] = None,
                 dom_start: bool = True,
                 improper: bool = False,
-                **kwargs) -> list[Path]:
-        """
+                **kwargs) -> List[Path]:
+        r"""
         Get discovered locations.
 
         Parameters
         ----------
-        custom : Path | None
+        custom : Optional[Path]
             custom location
         dom_start : bool
             When ``False``, end with most dominant
         improper : bool
             include improper locations such as *~/.project*
-        **kwargs : dict[str, Any]
-            trace_pwd : Path | os.PathLike | bool
+        **kwargs : Dict[str, Any]
+            trace_pwd : Union[Path, os.PathLike, bool]
                 When supplied, walk up to mountpoint or project-root and
                 inherit all locations that contain ``__init__.py``.
                 Project-root is identified by existence of ``setup.py`` or
                 ``setup.cfg``. Mountpoint is ``is_mount`` in unix or Drive
                 in Windows. If ``True``, walk from ``$PWD``.
-            \*\*permargs : dict[str, Any]
+            \*\*permargs : Dict[str, Any]
                     passed on to :meth:`xdgpspconf.utils.fs_perm`.
 
         Returns
         -------
-        list[ Path]
+        List[ Path]
             base paths with permissions [dom_start]
         """
-        dom_order: list[Path] = []
+        dom_order: List[Path] = []
 
         if custom is not None:
             # don't check
@@ -404,10 +404,10 @@ class BaseDisc():
         return list(reversed(dom_order))
 
     def safe_loc(self,
-                 custom: Path | None = None,
+                 custom: Optional[Path] = None,
                  dom_start: bool = True,
-                 **kwargs) -> list[Path]:
-        """
+                 **kwargs) -> List[Path]:
+        r"""
         Locate safe writeable paths.
 
         - Doesn't care about accessibility or existence of locations.
@@ -422,24 +422,24 @@ class BaseDisc():
 
         Parameters
         ----------
-        custom : Path | None
+        custom : Optional[Path]
             custom location
         dom_start : bin
             When ``False``, end with most dominant
-        \*\*kwargs : dict[str, Any]
-            trace_pwd : Path | os.PathLike | bool
+        **kwargs : Dict[str, Any]
+            trace_pwd : Union[Path, os.PathLike, bool]
                 When supplied, walk up to mountpoint or project-root and
                 inherit all locations that contain ``__init__.py``.
                 Project-root is identified by existence of ``setup.py`` or
                 ``setup.cfg``. Mountpoint is ``is_mount`` in unix or Drive in
                 Windows. If ``True``, walk from ``$PWD``.
-            \*\*permargs : dict[str, Any]
+            \*\*permargs : Dict[str, Any]
                 passed on to :meth:`xdgpspconf.utils.fs_perm`
 
 
         Returns
         -------
-        list[Path]
+        List[Path]
             First path is most dominant
 
         """
@@ -471,7 +471,7 @@ class CacheDisc(BaseDisc):
 
     def __init__(self,
                  project: str,
-                 shipped: Path | str | None = None,
+                 shipped: Optional[Union[Path, os.PathLike]] = None,
                  **permargs):
         super().__init__(project=project,
                          base='cache',
@@ -494,7 +494,7 @@ class DataDisc(BaseDisc):
 
     def __init__(self,
                  project: str,
-                 shipped: Path | str | None = None,
+                 shipped: Optional[Union[Path, os.PathLike]] = None,
                  **permargs):
         super().__init__(project=project,
                          base='data',
@@ -517,7 +517,7 @@ class StateDisc(BaseDisc):
 
     def __init__(self,
                  project: str,
-                 shipped: Path | str | None = None,
+                 shipped: Optional[Union[Path, os.PathLike]] = None,
                  **permargs):
         super().__init__(project=project,
                          base='state',

@@ -22,13 +22,11 @@
 import os
 from functools import reduce
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
-SAFE_TYPE = bool | float | int | str | tuple['SAFE_TYPE',
-                                             ...] | dict['SAFE_TYPE',
-                                                         'SAFE_TYPE'] | None
-
-PERMARGS: dict[str, Any] = {
+SAFE_TYPE = Optional[Union[bool, float, int, str, Tuple['SAFE_TYPE', ...],
+                           Dict['SAFE_TYPE', 'SAFE_TYPE']]]
+PERMARGS: Dict[str, Any] = {
     'mode': 0,
     'dir_fd': None,
     'effective_ids': True,
@@ -37,7 +35,7 @@ PERMARGS: dict[str, Any] = {
 """Keys accepted by :meth:`os.access`"""
 
 
-def fs_perm(path: Path, mode: str | int = 0, **permargs):
+def fs_perm(path: Path, mode: Union[str, int] = 0, **permargs):
     """
     Check rwx- permissions to the latest existing parent for effective id.
 
@@ -49,9 +47,9 @@ def fs_perm(path: Path, mode: str | int = 0, **permargs):
     ----------
     path : Path
         check permissions of this location or latest existing ancestor.
-    mode : str | int
+    mode : Union[str, int]
         permissions to check {[0-7],-,x,w,wx,r,rx,rw,rwx}
-    **permargs : dict[str, Any]
+    **permargs : Dict[str, Any]
         All are passed to :meth:`os.access`
 
     Returns
@@ -121,9 +119,9 @@ def is_mount(path: Path) -> bool:
         return False
 
 
-def serial_secure_seq(unsafe_seq: Sequence) -> tuple[SAFE_TYPE, ...]:
+def serial_secure_seq(unsafe_seq: Sequence) -> Tuple[SAFE_TYPE, ...]:
     """Resolve Sequence and stringify complex data types for safe dumping."""
-    safe_list: list[SAFE_TYPE] = []
+    safe_list: List[SAFE_TYPE] = []
     for item in unsafe_seq:
         if isinstance(item, (bool, str, int, float)) or item is None:
             safe_list.append(item)
@@ -136,9 +134,9 @@ def serial_secure_seq(unsafe_seq: Sequence) -> tuple[SAFE_TYPE, ...]:
     return tuple(safe_list)
 
 
-def serial_secure_map(unsafe_map: Mapping) -> dict[SAFE_TYPE, SAFE_TYPE]:
+def serial_secure_map(unsafe_map: Mapping) -> Dict[SAFE_TYPE, SAFE_TYPE]:
     """Resolve Mapping and stringify complex data types for safe dumping."""
-    safe_map: dict[SAFE_TYPE, SAFE_TYPE] = {}
+    safe_map: Dict[SAFE_TYPE, SAFE_TYPE] = {}
     for key, value in unsafe_map.items():
 
         # stringify key

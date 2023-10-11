@@ -23,11 +23,11 @@ pytest:
   needs:
   - job: build
   before_script:
-  - python3 -m pip install -U coverage pytest pytest-cov
+  - python3 -m pip install -U pytest pytest-cov
   - python3 -m pip install -U -r requirements.txt
   - cd tests
   script:
-  - python -m coverage run -m pytest --cov --junitxml=report.xml .
+  - python -m coverage run -m pytest --junitxml=report.xml .
   - python -m coverage xml
   after_script:
   - cd ..
@@ -35,7 +35,9 @@ pytest:
     when: always
     reports:
       junit: tests/report.xml
-      cobertura: tests/coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: tests/coverage.xml
   only:
     refs:
     - testing
