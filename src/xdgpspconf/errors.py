@@ -31,3 +31,17 @@ class BadConf(XdgpspConfError):
 
     def __init__(self, config_file: Path, *args):
         super().__init__(f'Bad configuration in {config_file}\n', *args)
+
+
+class FailedWriteError(XdgpspConfError):
+    """
+    Failed to write configuration.
+
+    Either a safe configuration file path couldn't be determined OR
+    All write-attempts failed.
+
+    This error is be raised `from` the last failed attempt.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

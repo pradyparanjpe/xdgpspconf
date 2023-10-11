@@ -7,7 +7,7 @@ stages:
 
 build:
   stage: build
-  image: "python:3.7-alpine"
+  image: "python:3.8-alpine"
   before_script:
   - python3 -m pip install wheel setuptools build
   - python3 -m pip install -U -r requirements.txt
@@ -18,7 +18,7 @@ build:
     - testing
 
 pytest:
-  image: "python:3.7-alpine"
+  image: "python:3.8-alpine"
   stage: test
   needs:
   - job: build
@@ -41,7 +41,7 @@ pytest:
     - testing
 
 pages:
-  image: "python:3.7-alpine"
+  image: "python:3.8-alpine"
   stage: docs
   before_script:
   - export PATH="${PATH}:${HOME}/.local/bin"
@@ -60,7 +60,7 @@ pages:
     - release
 
 pypi:
-  image: "python:3.7"
+  image: "python:3.8"
   stage: release
   before_script:
   - export PATH="${PATH}:${HOME}/.local/bin"

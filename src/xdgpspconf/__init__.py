@@ -20,8 +20,7 @@
 """
 XDG Platform Suited Project CONFiguration.
 
-- Read project configurationn from standard locations
-
+Read/Write project configuration, data to/from standard locations
 """
 
 from xdgpspconf import utils

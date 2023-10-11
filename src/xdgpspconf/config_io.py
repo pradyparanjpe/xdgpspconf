@@ -141,7 +141,8 @@ def parse_rc(config: Path, project: str | None = None) -> dict[str, Any]:
 
     Raises
     ------
-    BadConf : Bad configuration
+    BadConf
+        Bad configuration
 
     """
     if config.name == 'setup.cfg':
@@ -308,9 +309,15 @@ def write_ini(data: dict[str, Any], config: Path, force: str = 'fail') -> bool:
     return True
 
 
-def write_rc(data: dict[str, Any], config: Path, force: str = 'fail') -> bool:
+def write_rc(data: dict[str, Any],
+             config: Path,
+             form: str = 'yaml',
+             force: str = 'fail') -> bool:
     """
     Write data to configuration file.
+
+    Configuration file format, if not provided, is guessed from extension
+    and defaults to 'yaml'.
 
     Parameters
     ----------
@@ -318,6 +325,8 @@ def write_rc(data: dict[str, Any], config: Path, force: str = 'fail') -> bool:
         serial data (user must confirm serialization safety)
     config : Path
         configuration file path
+    form : {'yaml', 'json', 'toml', 'ini', 'conf', 'cfg'}
+        configuration format (skip extension guess.)
     force : {'overwrite', 'update', 'fail'}
         force overwrite
 
@@ -332,11 +341,14 @@ def write_rc(data: dict[str, Any], config: Path, force: str = 'fail') -> bool:
         write success
 
     """
-    if config.suffix in ('.conf', '.cfg', '.ini'):
+
+    print(form)
+    if ((config.suffix in ('.conf', '.cfg', '.ini'))
+            or (form in ('conf', 'cfg', 'ini'))):
         return write_ini(data, config, force)
-    if config.suffix == '.toml':
+    if config.suffix == '.toml' or form == 'toml':
         return write_toml(data, config, force)
-    if config.suffix == '.json':
+    if config.suffix == '.json' or form == 'json':
         return write_json(data, config, force)
     # assume yaml
     return write_yaml(data, config, force)

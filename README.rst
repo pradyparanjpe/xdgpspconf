@@ -27,6 +27,7 @@ Handle platform suited xdg-base to
    - Read configuration from standard locations.
       - supported formats:
          - yaml
+         - json
          - toml
          - conf (ini)
    - Write configuration to most general, writable xdg-location

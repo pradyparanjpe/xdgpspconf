@@ -15,6 +15,7 @@ Welcome to xdgpspconf's documentation!
    README
    INSTALL
    usage
+   CHANGELOG
    source-code-doc
 
 

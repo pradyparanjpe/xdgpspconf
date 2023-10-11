@@ -55,6 +55,7 @@ from typing import Any
 
 from xdgpspconf.base import BaseDisc
 from xdgpspconf.config_io import parse_rc, write_rc
+from xdgpspconf.errors import FailedWriteError
 from xdgpspconf.utils import PERMARGS, fs_perm
 
 CONF_EXT = '.yml', '.yaml', '.json', '.toml', '.conf', '.ini', ''
@@ -156,7 +157,8 @@ class ConfDisc(BaseDisc):
 
         Raises
         ------
-        KeyError : bad variable name
+        KeyError
+            bad variable name
 
         """
         if cname is None:
@@ -183,9 +185,11 @@ class ConfDisc(BaseDisc):
         list[Path]
             List of root-<base> Paths (parents to project's base)
             First directory is most dominant
+
         Raises
         ------
-        KeyError : bad variable name
+        KeyError
+            bad variable name
 
         """
         if cname is None:
@@ -215,7 +219,8 @@ class ConfDisc(BaseDisc):
 
         Raises
         ------
-        KeyError : bad variable name
+        KeyError
+            bad variable name
 
         """
         if cname is None:
@@ -439,8 +444,15 @@ class ConfDisc(BaseDisc):
 
         Raises
         ------
-        BadConf : Bad configuration file format
+        BadConf
+            Bad configuration file format
 
+        Examples
+        --------
+        >>> mypy_conf = ConfDisc('mypy')
+        >>> mypy_conf.read_config()
+        {PosixPath('~/.config/mypy/config'): {'mypy': {'mypy-pandas': {
+                        'disable_error_code': 'arg-type, assignment'}}}}
         """
         kwargs['mode'] = kwargs.get('mode', 4)
         avail_confs: dict[Path, dict[str, Any]] = {}
@@ -463,7 +475,8 @@ class ConfDisc(BaseDisc):
                      data: dict[str, Any],
                      force: str = 'fail',
                      dom_start: bool = True,
-                     **kwargs) -> Path | None:
+                     form: str = 'yaml',
+                     **kwargs) -> Path:
         """
         Write data to the most global safe configuration file.
 
@@ -474,6 +487,8 @@ class ConfDisc(BaseDisc):
         ----------
         data: serial data to save
         dom_start: when ``False``, end with most dominant
+        form : {'yaml', 'json', 'toml', 'ini', 'conf', 'cfg'}
+            configuration format (skip extension guess.)
         force: force overwrite {'overwrite','update','fail'}
         **kwargs : dict[str, Any]
             all are passed to :meth:`safe_coffig`
@@ -481,13 +496,34 @@ class ConfDisc(BaseDisc):
 
         Returns
         -------
-        Path | None
+        Path
             configuration was written here
+
+        Raises
+        ------
+        FailedWriteError
+            Error thrown by last write attempt to write.
+
+        Examples
+        --------
+        >>> mypy_conf = ConfDisc('mypy')
+        >>> mypy_conf_data = {'mypy-pandas':
+                {'disable_error_code': 'arg-type, assignment'}}
+        >>> mypy_conf.write_config(mypc_conf_data,
+                                   cname='config',
+                                   ext='',
+                                   form='ini')
+        PosixPath('/home/pradyumna/.config/mypy/config')
+
         """
+        raise_err: (PermissionError | IsADirectoryError | FileNotFoundError
+                    ) = FileNotFoundError('Could not determine config path.')
         for config in self.safe_config(dom_start=dom_start, **kwargs):
             try:
-                if write_rc(data, config, force=force):
+                if write_rc(data, config, form=form, force=force):
                     return config
-            except (PermissionError, IsADirectoryError, FileNotFoundError):
+            except (PermissionError, IsADirectoryError,
+                    FileNotFoundError) as err:
+                raise_err = err
                 continue
-        return None
+        raise FailedWriteError from raise_err

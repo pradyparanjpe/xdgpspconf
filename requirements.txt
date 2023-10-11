@@ -1,4 +1,5 @@
 # bash/zsh complete
 argcomplete
+pyjson5
 pyyaml
 toml
