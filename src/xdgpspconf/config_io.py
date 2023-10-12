@@ -71,11 +71,12 @@ def parse_json(config: Path) -> Dict[str, Any]:
     Dict[str, Any]
         parsed configuration
     """
+    conf: Dict[str, Any] = {}
     with open(config, 'r') as rcfile:
         try:
-            conf: Dict[str, Any] = pyjson5.load(rcfile)
+            conf = pyjson5.load(rcfile)
         except pyjson5.pyjson5.Json5EOF:
-            return {}
+            pass
     return conf
 
 

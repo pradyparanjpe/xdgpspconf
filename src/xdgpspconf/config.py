@@ -76,48 +76,26 @@ class ConfDisc(BaseDisc):
         super().__init__(project, base='config', shipped=shipped, **permargs)
 
     @property
-    def locations(self) -> Dict[str, List[Path]]:
-        shipped_loc = [(self.shipped / 'config').with_suffix(ext)
-                       for ext in CONF_EXT] if self.shipped else []
-        return {
-            'user_loc': self.user_xdg_loc,
-            'improper': self.improper_loc,
-            'root_loc': self.root_xdg_loc,
-            'shipped': shipped_loc
-        }
+    def locations(self) -> Dict[str, List[Path]]:  # pragma: no cover
+        # guard for inherited property
+        return self.get_locations('config')
 
     @property
-    def user_xdg_loc(self) -> List[Path]:
-        user_base_loc = super().user_xdg_loc
-        config = []
-        for ext in CONF_EXT:
-            for loc in user_base_loc:
-                config.append((loc / 'config').with_suffix(ext))
-                config.append(loc.with_suffix(ext))
-        return config
+    def user_xdg_loc(self) -> List[Path]:  # pragma: no cover
+        # guard for inherited property
+        return self.dir_cnames(super().user_xdg_loc)
 
     @property
-    def root_xdg_loc(self) -> List[Path]:
-        root_base_loc = super().root_xdg_loc
-        config = []
-        for ext in CONF_EXT:
-            for loc in root_base_loc:
-                config.append((loc / 'config').with_suffix(ext))
-                config.append(loc.with_suffix(ext))
-        return config
+    def improper_loc(self) -> List[Path]:  # pragma: no cover
+        # guard for inherited property
+        return self.dir_cnames(super().improper_loc)
 
     @property
-    def improper_loc(self) -> List[Path]:
-        improper_base_loc = super().improper_loc
-        config = []
-        for ext in CONF_EXT:
-            for loc in improper_base_loc:
-                config.append((loc / 'config').with_suffix(ext))
-                config.append(loc.with_suffix(ext))
-        return config
+    def root_xdg_loc(self) -> List[Path]:  # pragma: no cover
+        # guard for inherited property
+        return self.dir_cnames(super().root_xdg_loc)
 
-    def get_locations(self,
-                      cname: Optional[str] = None) -> Dict[str, List[Path]]:
+    def get_locations(self, cname: str = 'config') -> Dict[str, List[Path]]:
         """
         XDG, improper, root, shipped locations with custom config file name.
 
@@ -131,107 +109,37 @@ class ConfDisc(BaseDisc):
         Dict[str, List[Path]]
             named dictionary containing respective list of Paths
         """
-        if cname is None:
-            return self.locations
         shipped_loc = [(self.shipped / cname).with_suffix(ext)
                        for ext in CONF_EXT] if self.shipped else []
+
         return {
-            'user_loc': self.get_user_xdg_loc(cname),
-            'improper': self.get_improper_loc(cname),
-            'root_loc': self.get_root_xdg_loc(cname),
+            'user_loc': self.dir_cnames(super().user_xdg_loc, cname),
+            'improper': self.dir_cnames(super().improper_loc, cname),
+            'root_loc': self.dir_cnames(super().root_xdg_loc, cname),
             'shipped': shipped_loc
         }
 
-    def get_user_xdg_loc(self, cname: Optional[str] = None) -> List[Path]:
+    def dir_cnames(self, parents: List[Path], cname: str = 'config'):
         """
-        Get XDG_CONFIG_HOME locations, with custom config file name.
+        Generate potential config file names in parent locations.
 
         Parameters
         ----------
+        parents : List[Path]
+            parent file locations
         cname : str
-            name of config file
+            standard config file name
 
-        Returns
-        -------
-        List[Path]
-            List of xdg-<base> Paths: First directory is most dominant
-
-        Raises
-        ------
-        KeyError
-            bad variable name
-
+        Returns:
+            List of potential file paths
         """
-        if cname is None:
-            return self.user_xdg_loc
-        user_base_loc = super().user_xdg_loc
         config = []
-        for ext in CONF_EXT:
-            for loc in user_base_loc:
+        for loc in parents:
+            for ext in CONF_EXT:
                 config.append((loc / cname).with_suffix(ext))
                 config.append(loc.with_suffix(ext))
-        return config
-
-    def get_root_xdg_loc(self, cname: Optional[str] = None) -> List[Path]:
-        """
-        Get ROOT's config with custom config file name.
-
-        Parameters
-        ----------
-        cname : str
-            name of config file
-
-        Returns
-        -------
-        List[Path]
-            List of root-<base> Paths (parents to project's base)
-            First directory is most dominant
-
-        Raises
-        ------
-        KeyError
-            bad variable name
-
-        """
-        if cname is None:
-            return self.root_xdg_loc
-        root_base_loc = super().root_xdg_loc
-        config = []
-        for ext in CONF_EXT:
-            for loc in root_base_loc:
-                config.append((loc / cname).with_suffix(ext))
-                config.append(loc.with_suffix(ext))
-        return config
-
-    def get_improper_loc(self, cname: Optional[str] = None) -> List[Path]:
-        """
-        Get improperly located config with custom config file name.
-
-        Parameters
-        ----------
-        cname : str
-            name of config file
-
-        Returns
-        -------
-        List[Path]
-            List of root-<base> Paths (parents to project's base)
-            First directory is most dominant
-
-        Raises
-        ------
-        KeyError
-            bad variable name
-
-        """
-        if cname is None:
-            return self.improper_loc
-        improper_base_loc = super().improper_loc
-        config = []
-        for ext in CONF_EXT:
-            for loc in improper_base_loc:
-                config.append((loc / cname).with_suffix(ext))
-                config.append(loc.with_suffix(ext))
+            config.append(loc / (self.project + 'rc'))
+            config.append(loc.parent / (loc.name + 'rc'))
         return config
 
     def trace_ancestors(self, child_dir: Path) -> List[Path]:
@@ -323,7 +231,7 @@ class ConfDisc(BaseDisc):
             inheritance = self.trace_ancestors(Path(trace_pwd))
             dom_order.extend(inheritance)
 
-        locations = self.get_locations(kwargs.get('cname'))
+        locations = self.get_locations(kwargs.get('cname') or 'config')
 
         # xdg user locations
         dom_order.extend(locations['user_loc'])

@@ -1,6 +1,8 @@
 include *.rst
+include *.md
 include *.txt
 include LICENSE
+recursive-include src **.yml
 recursive-include docs *.bat
 recursive-include docs *.py
 recursive-include docs *.rst
@@ -9,7 +11,6 @@ recursive-include docs *.txt
 recursive-include docs Makefile
 recursive-include tests *.coveragerc
 recursive-include tests *.testrc
-recursive-include xdgpspconf *.yml
 recursive-exclude docs _build/**
 recursive-exclude tests __pycache__/**
 recursive-exclude tests htmlcov/*

@@ -115,7 +115,7 @@ release_job:
       - name: 'Gitlab pip repository'
         url: '${CI_PROJECT_URL}'
       - name: 'pip pypi repository'
-        url: 'https://https://pypi.org/project/${CI_PROJECT_NAME}/'
+        url: 'https://pypi.org/project/${CI_PROJECT_NAME}/'
   only:
     refs:
     - release
