@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""Test config locations."""
+"""Test common utils."""
 
 from pathlib import Path
 from unittest import TestCase
 
-from xdgpspconf.base import is_mount
-from xdgpspconf.utils import fs_perm, serial_secure_map, serial_secure_seq
+from xdgpspconf.utils import (fs_perm, is_mount, serial_secure_map,
+                              serial_secure_seq)
 
 
 class TestMount(TestCase):

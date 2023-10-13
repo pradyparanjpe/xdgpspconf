@@ -3,11 +3,6 @@
 [report]
 exclude_lines =
     pragma: no cover
-    if __name__ == '__main__':
-    def __repr__
-    @nb\.vectorize
-    @nb\.njit
-    @nb\.jit
 ignore_errors = True
 
 [run]

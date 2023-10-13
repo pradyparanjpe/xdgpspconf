@@ -301,10 +301,9 @@ class BaseDisc():
         }
 
     def __repr__(self) -> str:
-        r_out = []
-        for attr in ('project', 'permargs', 'shipped', 'xdg'):
-            r_out.append(f'{attr}: {getattr(self, attr)}')
-        return '\n'.join(r_out)
+        return '\n'.join(
+            (attr + str(getattr(self, attr))
+             for attr in ('project', 'permargs', 'shipped', 'xdg')))
 
     def trace_ancestors(self, child_dir: Path) -> List[Path]:
         """

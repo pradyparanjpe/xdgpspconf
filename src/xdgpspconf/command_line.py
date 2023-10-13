@@ -36,7 +36,7 @@ def _cli() -> ArgumentParser:
                         '--base',
                         type=str,
                         default='config',
-                        help='base-type sought',
+                        help='base-type sought [default: config]',
                         choices=('cache', 'config', 'data', 'state'))
     parser.add_argument('-s',
                         '--shipped',
@@ -50,14 +50,13 @@ def _cli() -> ArgumentParser:
                         '--mode',
                         type=str,
                         default='',
-                        help='filter by permission mode',
+                        help="filter by permission mode [default: '']",
                         choices=('', 'x', 'w', 'wx', 'r', 'rx', 'rw', 'rwx'))
     parser.add_argument('-n',
                         '--cname',
                         type=str,
                         default='config',
-                        help='''Name of config file [default: config]
-                        XDG_CONFIG_HOME/PROJECT/CNAME.(yml|toml|cfg)''')
+                        help='Name of config file [default: config]')
     parser.add_argument('-e', '--ext', type=str, help='restrict to extensions')
     parser.add_argument('-t',
                         '--trace-pwd',
