@@ -20,4 +20,4 @@
 """Project Properties."""
 __author__ = 'Pradyumna Paranjape'
 __copyright_years__ = '2021-2022'
-__version__ = '0!1.0.1'
+__version__ = '0!1.0.2'

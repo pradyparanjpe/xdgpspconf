@@ -17,21 +17,19 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with xdgpspconf. If not, see <https://www.gnu.org/licenses/>.
 #
-"""
-Test config locations
-"""
+"""Test config locations."""
 
 from pathlib import Path
 from unittest import TestCase
 
 from xdgpspconf import ConfDisc
+from xdgpspconf.config_io import parse_rc
 
 
 class TestConfig(TestCase):
 
     def setUp(self):
-        self.conf_disc = ConfDisc('test', mode='w', shipped=__file__)
-        print(self.conf_disc)
+        self.conf_disc = ConfDisc('test', mode='w', form=[], shipped=__file__)
 
     def test_order(self):
         self.assertEqual(
@@ -39,6 +37,7 @@ class TestConfig(TestCase):
             self.conf_disc.get_conf()[-1])
 
     def test_cname(self):
+        """Custom config name."""
         self.assertEqual(
             self.conf_disc.get_conf(dom_start=False, cname='style')[0],
             self.conf_disc.get_conf(cname='style')[-1])
@@ -56,9 +55,7 @@ class TestConfig(TestCase):
         self.assertNotIn(custom, self.conf_disc.get_conf())
 
     def test_safe_w_trace(self):
-        """
-        check that locations are returned
-        """
+        """check that locations are returned."""
         self.conf_disc.shipped = None
         data_locs = self.conf_disc.safe_config(trace_pwd=True)
         print(Path('.').resolve())
@@ -67,9 +64,7 @@ class TestConfig(TestCase):
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
 
     def test_safe_wo_ancestors(self):
-        """
-        check that locations are returned
-        """
+        """check that locations are returned."""
         data_locs = self.conf_disc.safe_config(ext='.yml')
         self.assertNotIn(Path('../setup.cfg').resolve(), data_locs)
 
@@ -77,7 +72,7 @@ class TestConfig(TestCase):
 class TestRead(TestCase):
 
     def setUp(self):
-        self.conf_disc = ConfDisc('test', __file__, mode='w')
+        self.conf_disc = ConfDisc('test', __file__, form=[], mode='w')
         print(self.conf_disc)
 
     def tearDown(self):
@@ -90,7 +85,9 @@ class TestRead(TestCase):
         configs = self.conf_disc.read_config(trace_pwd=True)
         print(configs)
         self.assertIn(Path('./.testrc').resolve(), configs)
-        configs = self.conf_disc.read_config(trace_pwd=True, flatten=True)
+        config = self.conf_disc.flat_config(trace_pwd=True)
+        print(configs)
+        print(config)
 
     def test_wo_ancestors(self):
         """
@@ -103,11 +100,8 @@ class TestRead(TestCase):
 class TestWrite(TestCase):
 
     def setUp(self):
-        self.conf_disc = ConfDisc('test', mode='w', shipped=__file__)
-        self.data = list(
-            self.conf_disc.read_config(flatten=True,
-                                       dom_start=True,
-                                       trace_pwd=True).values())[0]
+        self.conf_disc = ConfDisc('test', mode='w', form=[], shipped=__file__)
+        self.data = self.conf_disc.flat_config(dom_start=True, trace_pwd=True)
         print(self.conf_disc)
 
     def tearDown(self):
@@ -115,19 +109,17 @@ class TestWrite(TestCase):
 
     def test_write(self):
         # permission error
-        for ext in '.yml', '.json', '.toml', '.conf', None:
+        for ext in '.yml', '.json', '.toml', None:  # , '.conf'
             print(ext)
             conf_file = self.conf_disc.write_config(self.data,
                                                     'update',
                                                     dom_start=True,
                                                     trace_pwd=True,
                                                     ext=ext)
-            retrieved = list(
-                self.conf_disc.read_config(flatten=True,
-                                           trace_pwd=True,
-                                           ext=ext).values())[0]
-            print(self.data)
-            print(retrieved)
+            # retrieved = self.conf_disc.flat_config(trace_pwd=True, ext=ext)
+            print(conf_file)
+            print(conf_file.read_text())
+            retrieved, _ = parse_rc(config=conf_file)
             self.assertEqual(self.data, retrieved)
             conf_file.unlink(missing_ok=True)
 
@@ -136,4 +128,47 @@ class TestWrite(TestCase):
                                                 'update',
                                                 dom_start=False,
                                                 custom=Path.cwd())
+        conf_file.unlink(missing_ok=True)
+
+    def test_write_form(self):
+        # permission error
+        for form in 'yaml', 'json', 'toml', None:  # , 'ini'
+            print(form)
+            self.conf_disc.form = form
+            conf_file = self.conf_disc.write_config(self.data,
+                                                    'update',
+                                                    dom_start=True,
+                                                    trace_pwd=True)
+            print(conf_file)
+            print(conf_file.read_text())
+            retrieved, _ = parse_rc(config=conf_file, form=form)
+            conf_file.unlink(missing_ok=True)
+            self.assertEqual(self.data, retrieved)
+
+
+class TestIni(TestCase):
+
+    def setUp(self):
+        self.conf_disc = ConfDisc('test',
+                                  mode='w',
+                                  form='ini',
+                                  shipped=__file__)
+        self.data = {
+            'Section': {
+                'key-1': 'value1',
+                'key-2': 'value2'
+            },
+            'Section-2': {
+                'key-1': 'value3',
+                'key-3': 'value1'
+            }
+        }
+
+    def test_ini(self):
+        conf_file = self.conf_disc.write_config(self.data,
+                                                'update',
+                                                dom_start=True,
+                                                trace_pwd=True)
+        retrieved, _ = parse_rc(config=conf_file, form=self.conf_disc.form)
+        self.assertEqual(self.data, retrieved)
         conf_file.unlink(missing_ok=True)

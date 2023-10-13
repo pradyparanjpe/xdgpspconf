@@ -63,17 +63,64 @@ CONF_EXT = '.yml', '.yaml', '.json', '.toml', '.conf', '.ini', ''
 
 
 class ConfDisc(BaseDisc):
-    """
+    r"""
     CONF DISCoverer.
 
     Each location is config `FILE`, NOT `directory` as with :class:`BaseDisc`.
+
+    See Also
+    --------
+    :class:`xdgpspconf.base.DataDisc`
+    :class:`xdgpspconf.base.StateDisc`
+
+    Parameters
+    ----------
+    project : str
+        project under consideration
+    shipped : Path
+        ``namespace.__file__``
+    form : Optional[Union[List[str], str]]
+        default configuration format. see :attr:`ConfDisc.form`
+    \*\*permargs : Dict[str, Any]
+        all (arguments to :meth:`os.access`) are passed to
+        :meth:`xdgpspconf.utils.fs_perm`
+
     """
 
     def __init__(self,
                  project: str,
                  shipped: Optional[Union[Path, os.PathLike]] = None,
+                 form: Optional[Union[str, List[str]]] = None,
                  **permargs):
         super().__init__(project, base='config', shipped=shipped, **permargs)
+        self.form: Optional[Union[str, List[str]]] = form
+        """
+        Allowed conifiguration formats.
+
+        Effect on methods
+        -----------------
+
+        Reader methods
+        ~~~~~~~~~~~~~~
+        - :meth:`read_config`
+        - :meth:`flat_config`
+
+        If ``None``, reader methods set it to all found configuration formats.
+        Else, reader methods try to read only these formats.
+        If parameter ``form`` is supplied, it determines the format,
+        overriding this attribute.
+        If this learning is not desired, set this attribute to empty list [].
+
+        Writer methods
+        ~~~~~~~~~~~~~~
+        - :meth:`write_config`
+
+        If ``None``,  writes in the default (yaml) format.
+        If `str`, :meth:`write_config` writes in this format.
+        If `List`, :meth:`write_config` writes in the first format in the list.
+        If parameter ``form`` is supplied, it determines the format,
+        overriding this attribute.
+        """
 
     @property
     def locations(self) -> Dict[str, List[Path]]:  # pragma: no cover
@@ -94,6 +141,9 @@ class ConfDisc(BaseDisc):
     def root_xdg_loc(self) -> List[Path]:  # pragma: no cover
         # guard for inherited property
         return self.dir_cnames(super().root_xdg_loc)
+
+    def __repr__(self) -> str:
+        return super().__repr__() + '\n' + f'form: {self.form}'
 
     def get_locations(self, cname: str = 'config') -> Dict[str, List[Path]]:
         """
@@ -267,7 +317,12 @@ class ConfDisc(BaseDisc):
         - Improper locations (*~/.project*) are deliberately dropped
 
         .. tip::
-            use dom_start=``False`` for global storage
+            For global storage, use
+
+            .. code-block:: python
+
+                safe_config(..., dom_start=Flase, ...)
+
 
         Parameters
         ----------
@@ -319,6 +374,7 @@ class ConfDisc(BaseDisc):
     def read_config(self,
                     flatten: bool = False,
                     dom_start: bool = True,
+                    form: Optional[Union[List[str], str]] = None,
                     **kwargs) -> Dict[Path, Dict[str, Any]]:
         r"""
         Locate Paths to standard directories and parse config.
@@ -329,6 +385,8 @@ class ConfDisc(BaseDisc):
             superimpose configurations to return the final outcome
         dom_start : bool
             when ``False``, end with most dominant
+        form : Optional[Union[List[str], str]]
+            default configuration format. see :attr:`ConfDisc.form`
         **kwargs : Dict[str, Any]
             custom : Union[Path, os.PathLike]
                 custom location
@@ -365,12 +423,21 @@ class ConfDisc(BaseDisc):
         """
         kwargs['mode'] = kwargs.get('mode', 4)
         avail_confs: Dict[Path, Dict[str, Any]] = {}
+        rc_forms: List[str] = []
+        form = form or self.form
         # load configs from oldest ancestor to current directory
         for config in self.get_conf(dom_start=dom_start, **kwargs):
             try:
-                avail_confs[config] = parse_rc(config, project=self.project)
+                avail_confs[config], read_form = parse_rc(config,
+                                                          project=self.project,
+                                                          form=form)
+                if read_form:
+                    rc_forms.append(read_form)
             except (PermissionError, FileNotFoundError, IsADirectoryError):
                 pass
+
+        if self.form is None:
+            self.form = list(set(rc_forms))
 
         if not flatten:
             return avail_confs
@@ -380,27 +447,84 @@ class ConfDisc(BaseDisc):
             super_config.update(flat_config)
         return {Path.cwd(): super_config}
 
+    def flat_config(self,
+                    dom_start: bool = True,
+                    form: Optional[Union[List[str], str]] = None,
+                    **kwargs) -> Dict[str, Any]:
+        r"""
+        Locate Paths to standard directories and parse config.
+
+        Parameters
+        ----------
+        dom_start : bool
+            when ``False``, end with most dominant
+        form : Optional[Union[List[str], str]]
+            default configuration format. see :attr:`ConfDisc.form`
+        **kwargs : Dict[str, Any]
+            custom : Union[Path, os.PathLike]
+                custom location
+            cname : str
+                name of configuration file. Default: 'config'
+            trace_pwd : Union[Path, os.PathLike, bool]
+                when supplied, walk up to mountpoint or project-root and
+                inherit all locations that contain ``__init__.py``.
+                Project-root is identified by existence of ``setup.py`` or
+                ``setup.cfg``. Mountpoint returns ``True`` for
+                :meth:`Path.is_mount` in unix or is Drive in Windows. If
+                ``True``, walk from ``$PWD``.
+            improper : bool
+                include improper locations such as *~/.project*
+            \*\*permargs : Dict[str, Any]
+                passed on to :meth:`xdgpspconf.utils.fs_perm`
+
+        Returns
+        -------
+        Dict[str, Any]
+            parsed configuration from each available file
+
+        Raises
+        ------
+        BadConf
+            Bad configuration file format
+
+        Examples
+        --------
+        >>> mypy_conf = ConfDisc('mypy')
+        >>> mypy_conf.flat_config()
+        {'mypy': {'mypy-pandas': {'disable_error_code': 'arg-type, assignment'}}}
+        """
+        return (list(
+            self.read_config(flatten=True,
+                             dom_start=dom_start,
+                             form=form,
+                             **kwargs).values()))[0]
+
     def write_config(self,
                      data: Dict[str, Any],
                      force: str = 'fail',
                      dom_start: bool = True,
-                     form: str = 'yaml',
+                     form: Optional[str] = None,
                      **kwargs) -> Path:
         """
         Write data to the most global safe configuration file.
 
         .. tip::
-            use dom_start=``False`` for global storage
+            For global storage, use
+
+            .. code-block:: python
+
+                write_config(..., dom_start=Flase, ...)
 
         Parameters
         ----------
-        data: serial data to save
+        data : Dict[str, Any]
+            serial data to save
         dom_start: when ``False``, end with most dominant
         form : {'yaml', 'json', 'toml', 'ini', 'conf', 'cfg'}
-            configuration format (skip extension guess.)
+            configuration format see :attr:`ConfDisc.form`
         force: force overwrite {'overwrite','update','fail'}
         **kwargs : Dict[str, Any]
-            all are passed to :meth:`safe_coffig`
+            all are passed to :meth:`safe_config`
 
 
         Returns
@@ -428,6 +552,13 @@ class ConfDisc(BaseDisc):
         raise_err: Union[PermissionError, IsADirectoryError,
                          FileNotFoundError] = FileNotFoundError(
                              'Could not determine config path.')
+        if not form:
+            if self.form:
+                if isinstance(self.form, list):
+                    form = self.form[0]
+                else:
+                    form = self.form
+
         for config in self.safe_config(dom_start=dom_start, **kwargs):
             try:
                 if write_rc(data, config, form=form, force=force):

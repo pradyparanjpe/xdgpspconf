@@ -21,8 +21,9 @@
 
 import configparser
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import IO, Any, Dict, List, Optional, Tuple, Union
 
 import pyjson5
 import toml
@@ -71,13 +72,11 @@ def parse_json(config: Path) -> Dict[str, Any]:
     Dict[str, Any]
         parsed configuration
     """
-    conf: Dict[str, Any] = {}
     with open(config, 'r') as rcfile:
         try:
-            conf = pyjson5.load(rcfile)
-        except pyjson5.pyjson5.Json5EOF:
-            pass
-    return conf
+            return pyjson5.load(rcfile)
+        except pyjson5.Json5EOF:
+            return {}
 
 
 def parse_toml(config: Path, section: Optional[str] = None) -> Dict[str, Any]:
@@ -118,20 +117,29 @@ def parse_ini(config: Path, section: Optional[str] = None) -> Dict[str, Any]:
     Dict[str, Any]
         parsed configuration
     """
+    try:
+        return parse_toml(config, section=section)
+    except toml.TomlDecodeError:
+        pass
     parser = configparser.ConfigParser()
     parser.read(config)
     if section is None:
         return {
             pspcfg: dict(parser.items(pspcfg))
             for pspcfg in parser.sections()
-        }  # pragma: no cover
+        }
     return {
         pspcfg.replace(f'{section}.', ''): dict(parser.items(pspcfg))
         for pspcfg in parser.sections() if f'{section}.' in pspcfg
     }
 
 
-def parse_rc(config: Path, project: Optional[str] = None) -> Dict[str, Any]:
+def parse_rc(
+    config: Path,
+    *,
+    project: Optional[str] = None,
+    form: Optional[Union[List[str], str]] = None
+) -> Tuple[Dict[str, Any], Optional[str]]:
     """
     Parse rc file.
 
@@ -141,11 +149,13 @@ def parse_rc(config: Path, project: Optional[str] = None) -> Dict[str, Any]:
         path to configuration file
     project : str
         name of project (to locate subsection from pyptoject.toml)
+    form : Optional[Union[List[str], str]]
+        Expect file in this format. {'yaml', 'json', 'toml', 'ini'}
 
     Returns
     -------
-    Dict[str, Any]
-        configuration sections
+    Tuple[Dict[str, Any], str]
+        configuration sections, type of configuration
 
     Raises
     ------
@@ -155,177 +165,57 @@ def parse_rc(config: Path, project: Optional[str] = None) -> Dict[str, Any]:
     """
     if config.name == 'setup.cfg':
         # declared inside setup.cfg
-        return parse_ini(config, section=project)
+        return parse_ini(config, section=project), None
     if config.name == 'pyproject.toml':
         # declared inside pyproject.toml
-        return parse_toml(config, section=project)
+        return parse_toml(config, section=project), None
+    if form:
+        try:
+            if 'yaml' in form:
+                return parse_yaml(config), 'yaml'
+            elif 'json' in form:
+                return parse_json(config), 'json'
+            elif 'toml' in form:
+                return parse_toml(config), 'toml'
+            elif 'ini' in form:
+                return parse_ini(config), 'ini'
+        except (yaml.YAMLError, pyjson5.Json5Exception, toml.TomlDecodeError,
+                configparser.Error) as err:
+            raise BadConf(config_file=config) from err
     try:
         # yaml configuration format
-        return parse_yaml(config)
+        return parse_yaml(config), 'yaml'
     except (BadConf, yaml.YAMLError):
         try:
             # JSON object
-            return parse_json(config)
+            return parse_json(config), 'json'
         except pyjson5.Json5Exception:
             try:
                 # toml configuration format
-                return parse_toml(config)
+                return parse_toml(config), 'toml'
             except toml.TomlDecodeError:
                 try:
                     # try generic config-parser
-                    return parse_ini(config)
+                    return parse_ini(config), 'ini'
                 except configparser.Error:
                     raise BadConf(config_file=config)
 
 
-def write_yaml(data: Dict[str, Any],
-               config: Path,
-               force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
-
-    Parameters
-    ----------
-    data : Dict[str, Any]
-        serial data to save
-    config : Path
-        configuration file path
-    force : {'overwrite','update','fail'}
-        force overwrite
-
-    Returns
-    -------
-    bool
-        write success
-
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = parse_yaml(config)
-    data = {**old_data, **data}
-    config.parent.mkdir(parents=True, exist_ok=True)
-    with open(config, 'w') as rcfile:
-        yaml.safe_dump(data, rcfile)
-    return True
-
-
-def write_json(data: Dict[str, Any],
-               config: Path,
-               force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
-
-    Parameters
-    ----------
-    data : Dict[str, Any]
-        serial data to save
-    config : Path
-        configuration file path
-    force : {'overwrite','update','fail'}
-        force overwrite
-
-    Returns
-    -------
-    bool
-        write success
-
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = parse_json(config)
-    data = {**old_data, **data}
-    config.parent.mkdir(parents=True, exist_ok=True)
-    with open(config, 'w') as rcfile:
-        json.dump(data, rcfile)
-    return True
-
-
-def write_toml(data: Dict[str, Any],
-               config: Path,
-               force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
-
-    Parameters
-    ----------
-    data : Dict[str, Any]
-        serial data to save
-    config : Path
-        configuration file path
-    force : {'overwrite', 'update', 'fail'}
-        force overwrite
-
-    Returns
-    -------
-    bool
-        write success
-
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = parse_toml(config)
-    data = {**old_data, **data}
-    config.parent.mkdir(parents=True, exist_ok=True)
-    with open(config, 'w') as rcfile:
-        toml.dump(data, rcfile)
-    return True
-
-
-def write_ini(data: Dict[str, Any], config: Path, force: str = 'fail') -> bool:
-    """
-    Write data to configuration file.
-
-    Parameters
-    ----------
-    data : Dict[str, Any]
-        serial data to save
-    config : Path
-        configuration file path
-    force : {'overwrite', 'update', 'fail'}
-        force overwrite
-    Returns
-    -------
-    bool
-        write success
-
-    """
-    old_data: Dict[str, Any] = {}
-    if config.is_file():
-        # file already exists
-        if force == 'fail':
-            return False
-        if force == 'update':
-            old_data = parse_ini(config)
-    data = {**old_data, **data}
+def ini_dump(data: Dict[str, Any], stream: IO):
     parser = configparser.ConfigParser()
     parser.update(data)
-    config.parent.mkdir(parents=True, exist_ok=True)
-    with open(config, 'w') as rcfile:
-        parser.write(rcfile)
-    return True
+    parser.write(stream)
 
 
 def write_rc(data: Dict[str, Any],
              config: Path,
-             form: str = 'yaml',
+             form: Optional[str] = None,
              force: str = 'fail') -> bool:
     """
     Write data to configuration file.
 
-    Configuration file format, if not provided, is guessed from extension
-    and defaults to 'yaml'.
+    Configuration file format is guessed from extension. If file name extension
+    doesn't match any format, specified format [default: 'yaml'] is used.
 
     Parameters
     ----------
@@ -334,7 +224,7 @@ def write_rc(data: Dict[str, Any],
     config : Path
         configuration file path
     form : {'yaml', 'json', 'toml', 'ini', 'conf', 'cfg'}
-        configuration format (skip extension guess.)
+        configuration format when extension doesn't match
     force : {'overwrite', 'update', 'fail'}
         force overwrite
 
@@ -349,13 +239,29 @@ def write_rc(data: Dict[str, Any],
         write success
 
     """
+    handles: Optional[Tuple[Callable, Callable]] = None
+    ext_dict = {
+        '.conf': (parse_ini, ini_dump),
+        '.cfg': (parse_ini, ini_dump),
+        '.ini': (parse_ini, ini_dump),
+        '.toml': (parse_toml, toml.dump),
+        '.json': (parse_json, json.dump)
+    }
+    handles = ext_dict.get(config.suffix) or ext_dict.get(f'.{form}')
 
-    if ((config.suffix in ('.conf', '.cfg', '.ini'))
-            or (form in ('conf', 'cfg', 'ini'))):
-        return write_ini(data, config, force)
-    if config.suffix == '.toml' or form == 'toml':
-        return write_toml(data, config, force)
-    if config.suffix == '.json' or form == 'json':
-        return write_json(data, config, force)
-    # assume yaml
-    return write_yaml(data, config, force)
+    if not handles:
+        # fallback
+        handles = parse_yaml, yaml.dump
+
+    old_data: Dict[str, Any] = {}
+    if config.is_file():
+        # file already exists
+        if force == 'fail':
+            return False
+        if force == 'update':
+            old_data = handles[0](config)
+    data = {**old_data, **data}
+    config.parent.mkdir(parents=True, exist_ok=True)
+    with open(config, 'w') as rcfile:
+        handles[1](data, rcfile)
+    return True
