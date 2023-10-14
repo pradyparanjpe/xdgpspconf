@@ -24,18 +24,21 @@ Description
 ==============
 
 Handle platform suited xdg-base to
-   - Read configuration from standard locations.
-      - supported formats:
-         - yaml
-         - json
-         - toml
-         - conf (ini)
-   - Write configuration to most general, writable xdg-location
-   - Locate standard directories:
-      - xdg_cache
-      - xdg_config
-      - xdg_data
-      - xdg_state
+
+- Read configuration from standard locations.
+
+   - supported formats:
+      - yaml
+      - json
+      - toml
+      - conf (`ini <https://setuptools.pypa.io/en/latest/userguide/declarative_config.html#specifying-values>`__)
+
+- Write configuration to most general, writable xdg-location
+- Locate standard directories:
+   - xdg_cache
+   - xdg_config
+   - xdg_data
+   - xdg_state
 
 XDG Specification
 ---------------------
@@ -46,27 +49,82 @@ View xdg specifications `here <https://specifications.freedesktop.org/basedir-sp
 What does it do
 --------------------
 
-- Reads standard Windows/POSIX locations, current folder and optionally all ancestors and custom locations for xdg-configuration
-
-   - Platform-specific locations:
-      - Windows Locations: Environment Variable ``%LOCALAPPDATA%\<PROJECT>`` or ``%USERPROFILE%\AppData\Local\<PROJECT>``
-      - POSIX [Linux/MacOS] Locations: Environment Variable ``$XDG_CONFIG_HOME/<PROJECT>`` or ``$HOME/.config/<PROJECT>``
-
-   - Environment-declared variable: ``%<PROJECT>RC%`` for Windows or ``$<PROJECT>`` for POSIX
-   - Custom configuration path: supplied in function
-   - Relative path: ``$PWD/.<PROJECT>rc``
-
-      - **Ancestors**: Any of the parents, till project root or mountpoint, that contains ``__init__.py``, where,
-
-         - project root is the directory that contains ``setup.cfg`` or ``setup.py``
-         - mountpoint is checked using ``pathlib.Path.drive`` on windows or ``pathlib.Path.is_mount()`` on POSIX
-
 - Lists possible xdg-locations (existing and prospective)
 
-   - ``XDG_CACHE_HOME`` is supported for cache locations
-   - ``XDG_CONFIG_HOME``, ``XDG_CONFIG_DIRS`` are supported for configuration locations
-   - ``XDG_DATA_HOME``, ``XDG_DATA_DIRS`` are supported for data locations
-   - ``XDG_STATE_HOME``, ``XDG_STATE_DIRS`` are supported for state locations
+CACHE
+~~~~~~~~~
+
+``XDG_CACHE_HOME``
+
+DATA
+~~~~~~~
+- ``XDG_DATA_HOME``
+- ``XDG_DATA_DIRS``
+
+STATE
+~~~~~~~~
+- ``XDG_STATE_HOME``
+- ``XDG_STATE_DIRS``
+
+CONFIG
+~~~~~~~~
+
+- Reads configuration files from standard Windows/POSIX locations, current folder and optionally all ancestors and custom locations.
+
+Platform-specific 
+^^^^^^^^^^^^^^^^^^^
+
+Windows
+""""""""""
+- ``%LOCALAPPDATA%\<PROJECT>\config``
+- ``%USERPROFILE%\AppData\Local\<PROJECT>\config``
+
+POSIX
+""""""""""
+
+[Linux/MacOS]
+
+- ``${XDG_CONFIG_HOME:-${HOME}/.config}/<PROJECT>/config``
+- ``${XDG_CONFIG_HOME:-${HOME}/.config}/<PROJECT>``
+- ``${XDG_CONFIG_HOME:-${HOME}/.config}/<PROJECT>rc``
+- ``$DIR/<PROJECT>/config`` for each ``$DIR`` in ``$XDG_CONFIG_DIRS``
+
+.. tip::
+
+   Configuration file name 'config' is customizable.
+
+Environment
+-------------
+
+- declared variable: ``%<PROJECT>RC%`` for Windows or ``$<PROJECT>`` for POSIX
+
+Improper
+-----------
+
+- ``${HOME}/.<PROJECT>rc``
+
+.. warning::
+
+   This is disabled by default and deprecated, since it does not conform to XDG standards.
+
+Custom
+---------
+
+- configuration path: supplied in function
+
+Relative
+---------
+
+``./.<PROJECT>rc``
+
+Ancestors
+~~~~~~~~~~~
+
+Any of the parents, till project root or mountpoint, that contains ``__init__.py``, where,
+
+- project root is the directory that contains ``setup.cfg`` or ``setup.py``
+- mountpoint is checked using ``pathlib.Path.drive`` on windows or ``pathlib.Path.is_mount()`` on POSIX
+
 
 TODO
 ===========
