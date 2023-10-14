@@ -19,9 +19,9 @@ Configuration
 
 Read/Write Configurations.
 
-   - Read configurations declared at various locations by root (ADMIN), user (global, local), project (python only)
+- Read configurations declared at various locations by root (ADMIN), user (global, local), project (python only)
 
-   - Write to the most global, yet **writable** location.
+- Write to the most global, yet **writable** location.
 
 
 .. tabs::
@@ -142,6 +142,7 @@ Access data folders.
 
 
 .. note::
+
    - Similarly, use for pre-defined bases:
       - cache
       - state

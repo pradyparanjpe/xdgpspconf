@@ -1,3 +1,10 @@
+# Changes in v1.0.2
+
+## Additions
+- Format: Default format to read/write config files.
+- INI Configuration: In addition to the default `str`, config parser (`ini`) interpretes `bool`, `int`, `float`, `list` and `dict` data types with structures of these data types inside `list` and `dict`.
+- Configuration location: search `$XDG_CONFIG_HOME/<project>rc`
+
 # Changes in v1.0.0
 
 ## Dropped

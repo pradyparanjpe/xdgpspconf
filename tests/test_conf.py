@@ -154,6 +154,7 @@ class TestIni(TestCase):
                                   form='ini',
                                   shipped=__file__)
         self.data = {
+            'DEFAULT': {},
             'Section': {
                 'key-1': 'value1',
                 'key-2': 'value2'

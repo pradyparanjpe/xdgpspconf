@@ -23,13 +23,186 @@ import configparser
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import IO, Any, Dict, List, Optional, Tuple, Union
+from typing import (IO, Any, Dict, List, Mapping, Optional, Sequence, Tuple,
+                    Union)
 
 import pyjson5
 import toml
 import yaml
 
 from xdgpspconf.errors import BadConf
+
+
+class ConfStructParser(configparser.ConfigParser):
+    r"""
+    Extension to parse structures from :class:`configparser.ConfigParser`.
+
+    Datatypes
+    ---------
+
+    bool
+    ~~~~
+    Convert keys of :attr:`configparser.ConfigParser.BOOLEAN_STATES` to
+    corresponding boolean values.
+
+    int
+    ~~~
+    Convert numbers `N` such that ``N % 1 = 0`` to int.
+
+    float
+    ~~~~~
+    Return numbers which cannot be converted to int as floats.
+
+    List
+    ~~~~
+    Configuration lists may be specified in any of the following formats.
+
+    - **dangling** : indented deeper
+    - **List-semi**: delimited by ``;`` optionally wrapped with space(s).
+    - **List-comma**: delimited by ``,`` optionally wrapped with space(s).
+
+    Return them as lists. Further, if possible, convert elements to
+    suitable data-types.
+
+    Dict
+    ~~~~
+    Configuration dicts are lists, which contain 'key=value' pairs.
+    The spacer may be any of :attr:`configparser.ConfigParser._delimiter`,
+    which is ``[':', '=']`` by default, or may be specified using the keyword
+    `delimiter` provided to init.
+
+    Return them as dicts. Further, if possible, convert values to
+    suitable data-types.
+
+    """
+
+    def parsed_val(
+            self,
+            val: str) -> Optional[Union[bool, int, float, List, Dict, str]]:
+        """
+        Parse value string to nested python datatypes.
+
+        Parameters
+        ----------
+        val : str
+            string representation of structure
+
+        Returns
+        -------
+        Optional[Union[bool, int, float, List, Dict, str]]
+            Python datatype
+        """
+        if val in self.BOOLEAN_STATES:
+            return self.BOOLEAN_STATES[val]
+        # not a boolean
+        try:
+            float_val = float(val)
+            if float_val % 1:
+                return float_val
+            return int(float_val)
+        except ValueError:
+            pass
+        # NaN
+        if any((sep in val for sep in ('\n', ',', ';'))):
+            # dangling, `,` or ';' separated
+            if '\n' in val:
+                sep = '\n'
+            elif ';' in val:
+                sep = ';'
+            else:
+                sep = ','
+            list_val = [
+                self.parsed_val(line) for line in val.strip().rstrip().replace(
+                    '\\\n', ' ').split(sep)
+            ]
+            if all(isinstance(subval, str) for subval in list_val):
+                str_list: List[str] = list_val  # type: ignore [assignment]
+                delims = [
+                    delim for delim in
+                    self._delimiters  # type: ignore [attr-defined]
+                    if all((delim in subval for subval in str_list))
+                ]
+                delims.sort(key=lambda x: sum(
+                    (subval.index(x) for subval in str_list)))
+                if delims:
+                    delim = delims[0]
+                    return {
+                        key_value[0].strip().rstrip():
+                        self.parsed_val(key_value[1].strip().rstrip())
+                        for key_value in
+                        [subval.split(delim, 1) for subval in str_list]
+                    }
+            return list_val
+        # fallback: return as received
+        return val
+
+    def built_val(self,
+                  val: Optional[Union[bool, int, float, Sequence, Mapping,
+                                      str]],
+                  indent: int = 0,
+                  delimiter: str = '=') -> str:
+        """
+        Build a string representation of value structure.
+
+        Parameters
+        ----------
+        val : Optional[Union[bool, int, float, List, Dict, str]]
+            Value structure of given datatypes
+        indent : int
+            Indentation level of parent (sub)section or value. Lists and dicts
+            are indented 1 level deeper than this value.
+        delimiter : str
+            delimiter that separates keys from values
+        """
+        indent_ = indent + 1
+        if isinstance(val, bool):
+            return str([
+                key for key, value in self.BOOLEAN_STATES.items()
+                if value == val
+            ][0])
+        if isinstance(val, (int, float)):
+            return str(val)
+        dangle = ('\n' + '\t' * indent_)
+        if not isinstance(val, str) and isinstance(val, Sequence):
+            print(val)
+            return dangle.join(
+                (self.built_val(subval, indent_, delimiter) for subval in val))
+        if isinstance(val, Mapping):
+            return dangle.join((str(key) + delimiter +
+                                self.built_val(subval, indent_, delimiter)
+                                for key, subval in val.items()))
+        return str(val).replace('\n', dangle)
+
+    def items(self, *args, **kwargs):
+        """
+        Extension of :meth:`config.ConfigParser.items` to datatypes.
+
+        Interpret formatted strings as datatype structures.
+
+        Parameters
+        ----------
+        *args : Any
+            passed to :meth:`config.ConfigParser.items`
+        **kwargs : Dict[str, Any]
+            passed to :meth:`config.ConfigParser.items`
+        """
+        return {
+            key: self.parsed_val(val)
+            for key, val in super().items(*args, **kwargs)
+        }
+
+    def _write_section(self, fp, section_name, section_items, delimiter):
+        """Write a single section to the specified `fp`."""
+        fp.write("[{}]\n".format(section_name))
+        for key, value in section_items:
+            value = self._interpolation.before_write(self, section_name, key,
+                                                     value)
+            if value is not None or not self._allow_no_value:
+                value = delimiter + self.built_val(value, 0, delimiter)
+            else:
+                value = ""
+            fp.write("{}{}\n".format(key, value))
+        fp.write("\n")
 
 
 def parse_yaml(config: Path) -> Dict[str, Any]:
@@ -101,9 +274,11 @@ def parse_toml(config: Path, section: Optional[str] = None) -> Dict[str, Any]:
 
 
 def parse_ini(config: Path, section: Optional[str] = None) -> Dict[str, Any]:
-    """
+    r"""
     Read ini configuration.
 
+    .. warning::
+        INI doesn't have a standard format.
 
     Parameters
     ----------
@@ -117,21 +292,18 @@ def parse_ini(config: Path, section: Optional[str] = None) -> Dict[str, Any]:
     Dict[str, Any]
         parsed configuration
     """
-    try:
-        return parse_toml(config, section=section)
-    except toml.TomlDecodeError:
-        pass
-    parser = configparser.ConfigParser()
+    parser = ConfStructParser()
     parser.read(config)
     if section is None:
-        return {
-            pspcfg: dict(parser.items(pspcfg))
-            for pspcfg in parser.sections()
-        }
-    return {
-        pspcfg.replace(f'{section}.', ''): dict(parser.items(pspcfg))
-        for pspcfg in parser.sections() if f'{section}.' in pspcfg
-    }
+        return {pspcfg: dict(parser.items(pspcfg)) for pspcfg in parser}
+    section_config: Dict[str, Any] = {}
+    for pspcfg in parser:
+        if pspcfg == section:
+            section_config = {**section_config, **parser.items(pspcfg)}
+        elif section in pspcfg:
+            section_config[pspcfg.replace(f'{section}.',
+                                          '')] = dict(parser.items(pspcfg))
+    return section_config
 
 
 def parse_rc(
@@ -202,7 +374,7 @@ def parse_rc(
 
 
 def ini_dump(data: Dict[str, Any], stream: IO):
-    parser = configparser.ConfigParser()
+    parser = ConfStructParser()
     parser.update(data)
     parser.write(stream)
 
@@ -247,7 +419,8 @@ def write_rc(data: Dict[str, Any],
         '.toml': (parse_toml, toml.dump),
         '.json': (parse_json, json.dump)
     }
-    handles = ext_dict.get(config.suffix) or ext_dict.get(f'.{form}')
+    handles = ext_dict.get(config.suffix) or ext_dict.get(
+        f'.{form}')  # type: ignore [assignment]
 
     if not handles:
         # fallback
